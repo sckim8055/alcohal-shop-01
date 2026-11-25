@@ -1,0 +1,194 @@
+/* 술장터 — 막걸리 장터의 재료에서 가져온 모양
+   탁주 흰색 바탕, 막걸리 병 초록, 양은 주전자 노랑, 가격표의 빨간 매직, 옹기의 짙은 갈색.
+   그림자는 흐리게 번지지 않고 간판처럼 딱 떨어지게 쓴다. */
+:root {
+  --takju: #f3f4ea;
+  --paper: #ffffff;
+  --bottle: #17603e;
+  --bottle-deep: #0d3f28;
+  --kettle: #f2b705;
+  --kettle-pale: #fbe9a9;
+  --marker: #d62b1f;
+  --onggi: #2a1b14;
+  --onggi-soft: #6b5a50;
+  --cardboard: #e6cb97;
+  --tarp: #1e4fa3;
+  --line: 2px solid var(--onggi);
+  --hard: 4px 4px 0 var(--onggi);
+  --display: 'Do Hyeon', 'Noto Sans KR', sans-serif;
+  --body: 'Gowun Dodum', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  --hand: 'Gaegu', 'Gowun Dodum', cursive;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--takju);
+  color: var(--onggi);
+  font-family: var(--body);
+  font-size: 17px;
+  line-height: 1.65;
+  word-break: keep-all;
+}
+a { color: inherit; }
+img, svg { max-width: 100%; }
+h1, h2, h3 { font-family: var(--display); font-weight: 400; line-height: 1.2; margin: 0; letter-spacing: 0.01em; }
+h1 { font-size: clamp(2rem, 5vw, 3.2rem); }
+h2 { font-size: 1.75rem; }
+h3 { font-size: 1.3rem; }
+p { margin: 0 0 0.8em; }
+:focus-visible { outline: 3px solid var(--tarp); outline-offset: 2px; }
+
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+main.wrap { padding-top: 28px; padding-bottom: 64px; min-height: 60vh; }
+.muted { color: var(--onggi-soft); }
+.small { font-size: 0.9rem; }
+.right { text-align: right; }
+.row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.spread { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.stack > * + * { margin-top: 20px; }
+
+/* ---- 천막과 간판 ---- */
+.awning {
+  height: 30px;
+  background: repeating-linear-gradient(90deg, var(--bottle) 0 40px, #fff 40px 80px);
+  border-bottom: var(--line);
+}
+.awning-edge {
+  height: 20px;
+  background:
+    radial-gradient(circle at 20px 0, var(--bottle) 19px, transparent 20px) 0 0 / 80px 20px repeat-x,
+    radial-gradient(circle at 20px 0, #fff 19px, transparent 20px) 40px 0 / 80px 20px repeat-x;
+  filter: drop-shadow(0 2px 0 var(--onggi));
+}
+.masthead { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-top: 6px; padding-bottom: 14px; flex-wrap: wrap; }
+.sign {
+  display: inline-block;
+  font-family: var(--display);
+  font-size: 2.3rem;
+  line-height: 1;
+  text-decoration: none;
+  background: var(--kettle);
+  border: var(--line);
+  box-shadow: var(--hard);
+  padding: 10px 18px 8px;
+  transform: rotate(-1.5deg);
+}
+.sign small { display: block; font-family: var(--hand); font-weight: 700; font-size: 1rem; margin-top: 4px; }
+.nav { display: flex; gap: 4px 18px; flex-wrap: wrap; align-items: center; font-family: var(--display); font-size: 1.15rem; }
+.nav a, .nav button { text-decoration: none; padding: 4px 2px; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; border-bottom: 3px solid transparent; }
+.nav a:hover, .nav button:hover, .nav a[aria-current='page'] { border-bottom-color: var(--kettle); }
+.count { display: inline-block; min-width: 1.5em; text-align: center; background: var(--marker); color: #fff; border-radius: 999px; font-size: 0.85rem; padding: 0 6px; margin-left: 4px; }
+.hello { font-family: var(--body); font-weight: 700; font-size: 1rem; color: var(--bottle-deep); }
+
+.foot { background: var(--onggi); color: #e9e2d6; padding: 28px 0 36px; font-size: 0.92rem; }
+.foot strong { font-family: var(--display); font-size: 1.3rem; color: var(--kettle); font-weight: 400; }
+
+/* ---- 첫 화면 ---- */
+.hero { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; align-items: end; border-bottom: var(--line); padding-bottom: 20px; }
+.hero h1 { font-size: clamp(2.4rem, 6.4vw, 4.6rem); line-height: 1.05; }
+.hero p { font-size: 1.1rem; max-width: 30em; margin-top: 14px; }
+.hero .kettle { justify-self: end; width: min(100%, 300px); }
+.search { display: flex; gap: 8px; margin-top: 18px; max-width: 460px; }
+.chips { display: flex; gap: 8px; flex-wrap: wrap; margin: 22px 0 6px; }
+.chip { font-family: var(--display); font-size: 1.1rem; text-decoration: none; padding: 5px 14px 3px; border: var(--line); background: var(--paper); }
+.chip[aria-current='true'] { background: var(--bottle); color: #fff; }
+
+/* ---- 좌판(상품 카드) ---- */
+.stalls { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 30px 22px; margin-top: 22px; }
+.stall { position: relative; display: block; text-decoration: none; background: var(--paper); border: var(--line); }
+.stall:hover { box-shadow: var(--hard); }
+.stall .art { display: block; height: 150px; border-bottom: var(--line); }
+.stall .art svg { width: 100%; height: 100%; display: block; }
+.stall .info { display: block; padding: 12px 14px 44px; }
+.stall .name { display: block; font-family: var(--display); font-size: 1.3rem; line-height: 1.25; }
+.stall .shop { display: block; font-size: 0.9rem; color: var(--onggi-soft); margin-top: 2px; }
+.tag {
+  position: absolute; right: -8px; bottom: -12px;
+  background: var(--cardboard);
+  border: var(--line);
+  padding: 4px 12px 2px;
+  transform: rotate(-3deg);
+  font-family: var(--display);
+  font-size: 1.5rem;
+  color: var(--marker);
+  line-height: 1.15;
+  text-align: right;
+}
+.tag s { display: block; font-family: var(--hand); font-weight: 700; font-size: 1rem; color: var(--onggi); }
+.tag.big { position: static; display: inline-block; font-size: 2.4rem; padding: 8px 20px 4px; }
+.age { position: absolute; left: 10px; top: 10px; width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--marker); background: #fff; color: var(--marker); font-family: var(--display); font-size: 1rem; display: grid; place-items: center; }
+.soldout { position: absolute; left: 0; right: 0; top: 56px; text-align: center; }
+
+/* ---- 도장(상태 표시) ---- */
+.stamp { display: inline-block; font-family: var(--display); font-size: 1.05rem; line-height: 1; color: var(--marker); border: 2.5px solid currentColor; border-radius: 7px; padding: 5px 9px 3px; transform: rotate(-4deg); background: rgba(255, 255, 255, 0.7); white-space: nowrap; }
+.stamp.good { color: var(--bottle); }
+.stamp.blue { color: var(--tarp); }
+.stamp.off { color: var(--onggi-soft); }
+
+/* ---- 단추와 입력 ---- */
+.btn { display: inline-block; font-family: var(--display); font-size: 1.15rem; line-height: 1.2; text-decoration: none; cursor: pointer; background: var(--bottle); color: #fff; border: var(--line); box-shadow: 3px 3px 0 var(--onggi); padding: 9px 18px 7px; }
+.btn:hover { background: var(--bottle-deep); }
+.btn:active { transform: translate(3px, 3px); box-shadow: none; }
+.btn.yellow { background: var(--kettle); color: var(--onggi); }
+.btn.yellow:hover { background: #ffc91f; }
+.btn.plain { background: var(--paper); color: var(--onggi); }
+.btn.plain:hover { background: var(--kettle-pale); }
+.btn.small { font-size: 1rem; padding: 5px 11px 3px; box-shadow: 2px 2px 0 var(--onggi); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+label { display: block; font-weight: 700; margin-bottom: 4px; }
+input, select, textarea { font: inherit; color: inherit; width: 100%; background: var(--paper); border: var(--line); border-radius: 0; padding: 8px 10px; }
+textarea { min-height: 120px; resize: vertical; }
+input[type='checkbox'] { width: auto; }
+.field { margin-bottom: 14px; }
+.fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0 16px; }
+.hint { font-size: 0.88rem; color: var(--onggi-soft); margin-top: 3px; }
+.narrow { max-width: 460px; }
+
+/* ---- 종이(내용 상자)와 알림 ---- */
+.sheet { background: var(--paper); border: var(--line); padding: 20px 22px; }
+.sheet > h2, .sheet > h3 { margin-bottom: 12px; }
+.note { border: var(--line); background: var(--kettle-pale); padding: 10px 14px; margin-bottom: 18px; }
+.note.error { background: #fde0dc; }
+.note.ok { background: #dcefe3; }
+.title { margin-bottom: 18px; }
+.title h1, h2.under { display: inline; background: linear-gradient(transparent 62%, var(--kettle) 62%); padding: 0 4px; }
+
+/* ---- 장부(표) ---- */
+table { width: 100%; border-collapse: collapse; }
+th { font-family: var(--display); font-weight: 400; font-size: 1.05rem; text-align: left; border-bottom: var(--line); padding: 6px 8px; white-space: nowrap; }
+td { border-bottom: 1.5px dashed #b9ab9d; padding: 9px 8px; vertical-align: top; }
+td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; }
+.total { font-family: var(--display); font-size: 1.6rem; }
+.total b { color: var(--marker); font-weight: 400; }
+
+.detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: start; }
+.detail .art { border: var(--line); background: var(--paper); aspect-ratio: 4 / 3; }
+.detail .art svg { width: 100%; height: 100%; display: block; }
+.steps { list-style: none; margin: 8px 0 0; padding: 0; }
+.steps li { padding: 2px 0 2px 22px; position: relative; }
+.steps li::before { content: ''; position: absolute; left: 4px; top: 0.65em; width: 9px; height: 9px; border-radius: 50%; background: var(--bottle); }
+.pay { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: center; border: 2px dashed var(--onggi); background: var(--kettle-pale); padding: 14px 16px; margin: 12px 0; }
+.account { font-family: var(--display); font-size: 1.35rem; }
+.inline-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.inline-form input, .inline-form select { width: auto; flex: 1 1 130px; padding: 5px 8px; }
+
+@media (max-width: 760px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero .kettle { justify-self: start; width: 190px; order: -1; }
+  .detail { grid-template-columns: 1fr; }
+  .sign { font-size: 1.9rem; }
+  .pay { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* ---- 인쇄: 영수증만 남긴다 ---- */
+@media print {
+  body { background: #fff; font-size: 12pt; }
+  .awning, .awning-edge, .masthead, .foot, .no-print { display: none !important; }
+  main.wrap { padding: 0; max-width: none; }
+  .sheet { border: 0; padding: 0; }
+  .receipt + .receipt { page-break-before: always; }
+}

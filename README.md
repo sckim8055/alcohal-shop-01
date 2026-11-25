@@ -7,7 +7,7 @@
 | 폴더 | 내용 |
 | --- | --- |
 | `server/` | API 서버: JDK 25, Spring Boot 4, Gradle 9, H2(로컬) / MySQL(운영), Flyway |
-| `web/` | 화면: React(Next.js), 아직 없음 |
+| `web/` | 화면: React 19 + Next.js 16 (TypeScript). `/api` 요청은 Next.js가 서버로 전달한다 |
 
 서버 코드는 `auth`(회원·권한), `catalog`(상품), `order`(장바구니·주문·배송), `seller`, `admin`(운영·청구서), `board`, `sample`(시범 데이터), `common` 꾸러미로 나뉜다.
 
@@ -21,6 +21,7 @@
 | Gradle | `..\gradle-9.9.2` |
 | Node.js | `..\node-v26.13.1-win-x64` |
 | Gradle 라이브러리 캐시 | `..\_gradle-cache` (자동 생성) |
+| npm 캐시 | `..\_npm-cache` (자동 생성) |
 
 도구 버전을 바꾸면 `env.bat`의 폴더 이름만 고치면 된다.
 
@@ -28,7 +29,10 @@
 | --- | --- |
 | `check.bat` | 도구 버전 확인 |
 | `test.bat` | 자동 테스트 실행 (첫 실행 때 라이브러리를 내려받음) |
-| `run.bat` | 서버 실행 → http://localhost:8080/api/health |
+| `run.bat` | API 서버 실행 → http://localhost:8080/api/health |
+| `web.bat` | 화면 실행 → http://localhost:3000 (첫 실행 때 패키지를 내려받음) |
+
+사이트를 보려면 `run.bat`과 `web.bat`을 둘 다 켜 두고 http://localhost:3000 을 연다.
 
 로컬 DB 파일은 `server/data/`에 생기며, 지우면 초기 상태로 돌아간다.
 
@@ -53,7 +57,7 @@ DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳,
 
 ## API
 
-화면(React)은 아직 없고, 지금은 API만 있다. 모든 주소는 `/api` 로 시작한다.
+모든 주소는 `/api` 로 시작한다. 화면은 이 API만 쓴다.
 
 - 화면을 열 때 `GET /api/me` 로 로그인 상태와 `csrfToken` 을 받는다.
 - 값을 바꾸는 요청(POST, PUT)은 `X-CSRF-Token` 머리말에 그 토큰을 넣어야 한다. 로그인하면 토큰이 바뀐다.
@@ -74,7 +78,15 @@ DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳,
 
 업무 규칙은 `server/src/test/java/me/nexthub/sool/FlowTest.java` 의 테스트 이름을 읽으면 한눈에 볼 수 있다.
 
+## 화면 디자인
+
+막걸리 장터에서 가져온 모양이다: 초록·흰 줄무늬 천막, 노란 양은 주전자 색 간판, 골판지 가격표와 빨간 매직 글씨, 도장 모양 상태 표시.
+색과 글꼴은 `web/app/globals.css` 맨 위의 변수로 모아 두었다. 글꼴(도현, 고운돋움, 개구)은 패키지에 들어 있어 인터넷 없이도 나온다.
+상품 사진 기능은 아직 없어서 분류별 그림(`web/components/Art.tsx`)을 대신 쓴다.
+
 ## 아직 시범용인 부분
+
+- 상품 사진 올리기가 없다.
 
 - 성인인증: 입력한 생년월일만 본다. 법적 성인인증이 아니므로 실제 판매 전에 본인확인 서비스로 바꿔야 한다.
 - 배송 조회: 발송 후 약 2분이 지나면 배송 완료가 되는 가짜 데이터다.
