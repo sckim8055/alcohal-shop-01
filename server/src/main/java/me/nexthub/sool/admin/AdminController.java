@@ -16,6 +16,8 @@ import me.nexthub.sool.catalog.Category;
 import me.nexthub.sool.common.ApiException;
 import me.nexthub.sool.common.AppClock;
 import me.nexthub.sool.common.Tenant;
+import me.nexthub.sool.common.Text;
+import me.nexthub.sool.notify.NotificationService;
 import me.nexthub.sool.order.OrderService;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -70,9 +72,11 @@ public class AdminController {
     private final Catalog catalog;
     private final OrderService orders;
     private final InvoiceService invoices;
+    private final NotificationService notifications;
 
     public AdminController(JdbcClient db, Auth auth, Tenant tenant, AppClock clock, Catalog catalog,
-                           OrderService orders, InvoiceService invoices) {
+                           OrderService orders, InvoiceService invoices, NotificationService notifications) {
+        this.notifications = notifications;
         this.db = db;
         this.auth = auth;
         this.tenant = tenant;
@@ -101,7 +105,7 @@ public class AdminController {
                   FROM sub_order so JOIN shop_order o ON o.id = so.order_id JOIN seller s ON s.id = so.seller_id
                  WHERE so.tenant_id = :t ORDER BY so.id DESC LIMIT 30
                 """).param("t", tenant.id()).query(RecentSub.class).list();
-        return new Dashboard(sellers, catalog.categories(), orders.defaultRateBp(), invoices.listAll(), log, subs,
+        return new Dashboard(sellers, catalog.categories(true), orders.defaultRateBp(), invoices.listAll(), log, subs,
                 YearMonth.from(clock.today()).toString());
     }
 
@@ -109,11 +113,17 @@ public class AdminController {
     public Map<String, Boolean> sellerStatus(@PathVariable("id") long id, @RequestBody StatusRequest body,
                                              HttpServletRequest request) {
         auth.requireAdmin(request);
-        if (!List.of("approved", "rejected", "pending").contains(body.status())) {
+        if (!Text.in(body.status(), List.of("approved", "rejected", "pending"))) {
             throw ApiException.bad("입점 상태 값이 올바르지 않습니다.");
         }
-        db.sql("UPDATE seller SET status = :st WHERE id = :id AND tenant_id = :t")
+        int changed = db.sql("UPDATE seller SET status = :st WHERE id = :id AND tenant_id = :t AND status <> :st")
                 .param("st", body.status()).param("id", id).param("t", tenant.id()).update();
+        if (changed == 1 && !"pending".equals(body.status())) {
+            long memberId = db.sql("SELECT member_id FROM seller WHERE id = :id").param("id", id).query(Long.class).single();
+            boolean approved = "approved".equals(body.status());
+            notifications.notifyWithMail(memberId, approved ? "입점이 승인되었습니다" : "입점 신청이 반려되었습니다",
+                    approved ? "이제 상품을 올리고 판매를 시작할 수 있습니다." : "자세한 사유는 운영자에게 문의해 주세요.", "/seller");
+        }
         return OK;
     }
 
@@ -128,8 +138,8 @@ public class AdminController {
         if (!verified) {
             // 면허 확인을 취소하면 그 판매자의 주류 상품을 숨긴다.
             db.sql("""
-                    UPDATE product SET status = 'hidden'
-                     WHERE seller_id = :id AND tenant_id = :t
+                    UPDATE product SET status = 'paused'
+                     WHERE seller_id = :id AND tenant_id = :t AND status = 'on_sale'
                        AND category_id IN (SELECT id FROM category WHERE is_alcohol = TRUE)
                     """).param("id", id).param("t", tenant.id()).update();
         }
@@ -177,7 +187,15 @@ public class AdminController {
     @PostMapping("/api/admin/invoices/generate")
     public Map<String, Integer> generate(@RequestBody PeriodRequest body, HttpServletRequest request) {
         auth.requireAdmin(request);
-        return Map.of("count", invoices.generate(body.period()));
+        int count = invoices.generate(body.period());
+        for (InvoiceService.Invoice i : invoices.listAll()) {
+            if (i.periodYm().equals(body.period()) && "issued".equals(i.status())) {
+                long memberId = db.sql("SELECT member_id FROM seller WHERE id = :id").param("id", i.sellerId()).query(Long.class).single();
+                notifications.notifyWithMail(memberId, i.periodYm() + " 수수료 청구서가 나왔습니다",
+                        "입금 확인된 매출 " + String.format("%,d원", i.salesTotal()) + ", 수수료 " + String.format("%,d원", i.amount()), "/seller/invoices");
+            }
+        }
+        return Map.of("count", count);
     }
 
     @PostMapping("/api/admin/invoices/{id}/paid")

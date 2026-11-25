@@ -7,12 +7,19 @@ import jakarta.servlet.http.HttpServletRequest;
 
 import me.nexthub.sool.auth.Auth;
 import me.nexthub.sool.auth.Member;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+
 import me.nexthub.sool.common.ApiException;
+import me.nexthub.sool.common.AppClock;
+import me.nexthub.sool.common.Paged;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** 구매자의 주문, 입금 신고, 취소, 구매확정, 영수증. */
@@ -30,8 +37,10 @@ public class OrderController {
     private final Auth auth;
     private final OrderService orders;
     private final TrackingService tracking;
+    private final AppClock clock;
 
-    public OrderController(Auth auth, OrderService orders, TrackingService tracking) {
+    public OrderController(Auth auth, OrderService orders, TrackingService tracking, AppClock clock) {
+        this.clock = clock;
         this.auth = auth;
         this.orders = orders;
         this.tracking = tracking;
@@ -49,9 +58,26 @@ public class OrderController {
         return orders.find(id);
     }
 
+    /** period: 6m(최근 6개월, 기본), all(전체), 또는 연도(예: 2026) */
     @GetMapping("/api/orders")
-    public List<OrderDetail> list(HttpServletRequest request) {
-        return orders.listForBuyer(auth.requireUser(request).id());
+    public Paged<OrderDetail> list(@RequestParam(name = "period", required = false) String period,
+                                   @RequestParam(name = "page", required = false) Integer page,
+                                   HttpServletRequest request) {
+        LocalDateTime from = null;
+        LocalDateTime to = null;
+        LocalDate today = clock.today();
+        if (period != null && period.matches("\\d{4}")) {
+            int year = Integer.parseInt(period);
+            from = kstStart(LocalDate.of(year, 1, 1));
+            to = kstStart(LocalDate.of(year + 1, 1, 1));
+        } else if (!"all".equals(period)) {
+            from = kstStart(today.minusMonths(6));
+        }
+        return orders.listForBuyer(auth.requireUser(request).id(), from, to, Paged.page(page), 10);
+    }
+
+    private static LocalDateTime kstStart(LocalDate date) {
+        return date.atStartOfDay(AppClock.KST).withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
     }
 
     /** 주문 상세 겸 통합 영수증 자료: 구매자 본인과 운영자만 볼 수 있다. */

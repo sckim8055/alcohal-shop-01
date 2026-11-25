@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class HealthController {
 
-    public record Health(String status, String javaVersion, int categoryCount, boolean virtualThread) {
+    public record Health(String status, String javaVersion, boolean db, boolean virtualThread) {
     }
 
     private final JdbcTemplate jdbc;
@@ -19,11 +19,11 @@ public class HealthController {
 
     @GetMapping("/api/health")
     public Health health() {
-        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM category", Integer.class);
+        Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM tenant", Integer.class);
         return new Health(
                 "ok",
                 Runtime.version().toString(),
-                count == null ? 0 : count,
+                count != null && count > 0,
                 Thread.currentThread().isVirtual());
     }
 }

@@ -58,10 +58,13 @@ public class SampleData implements ApplicationRunner {
     /** 테스트 전용: 모든 업무 데이터를 지우고 설정을 처음 값으로 돌린다. */
     public void reset() {
         for (String table : List.of("order_item", "sub_order", "shop_order", "cart_item", "commission_invoice",
-                "commission_rate_log", "post", "product", "seller", "member")) {
+                "commission_rate_log", "post", "product_media", "product", "seller", "upload_file",
+                "notification", "message_outbox", "member")) {
             db.sql("DELETE FROM " + table).update();
         }
-        db.sql("UPDATE category SET commission_rate_bp = CASE WHEN is_alcohol = TRUE THEN 100 ELSE NULL END").update();
+        db.sql("DELETE FROM category WHERE name LIKE '테스트%' AND parent_id IS NOT NULL").update();
+        db.sql("DELETE FROM category WHERE name LIKE '테스트%'").update();
+        db.sql("UPDATE category SET active = TRUE, commission_rate_bp = CASE WHEN is_alcohol = TRUE AND parent_id IS NULL THEN 100 ELSE NULL END").update();
         db.sql("UPDATE app_setting SET setting_value = '300' WHERE setting_key = 'default_commission_rate_bp'").update();
         clock.reset();
     }
@@ -91,46 +94,83 @@ public class SampleData implements ApplicationRunner {
         seller(mNew, "새내기 가게", "000-00-00004", "입점 심사를 기다리는 가게입니다.", "pending",
                 "", "", "", "", "", false, 3500, null);
 
-        long alcohol = category("전통주");
-        long raw = category("원재료");
-        long tool = category("양조 기구");
-        long cup = category("술잔·주기");
-        long lesson = category("강의·체험");
+        long takju = category("탁주·막걸리");
+        long yakju = category("약주·청주");
+        long fruit = category("과실주·와인");
+        long gift = category("선물 세트");
+        long starter = category("누룩·효모");
+        long grain = category("쌀·곡물");
+        long vessel = category("발효 용기");
+        long gauge = category("계측 도구");
+        long filter = category("거름·병입 도구");
+        long cup = category("술잔");
+        long jug = category("주병·주전자");
+        long pot = category("술독·항아리");
+        long prop = category("소품");
+        long lesson = category("빚기 수업");
         LocalDate today = clock.today();
 
-        product(brew, alcohol, "한울 생막걸리 750ml", "지역 쌀과 전통 누룩으로 빚은 생막걸리. 냉장 보관.", 8000, 50);
-        product(brew, alcohol, "한울 약주 500ml", "맑게 거른 약주. 선물용 상자 포함.", 22000, 20, 19000L, null, null, "physical", "active");
-        product(brew, alcohol, "한울 탁주 원주 375ml", "물을 타지 않은 진한 원주.", 15000, 30);
-        product(brew, alcohol, "한울 생막걸리 6병 묶음", "생막걸리 750ml 여섯 병.", 45000, 15);
+        product(brew, takju, "한울 생막걸리 750ml", "지역 쌀과 전통 누룩으로 빚은 생막걸리. 냉장 보관.", 8000, 50);
+        product(brew, yakju, "한울 약주 500ml", "맑게 거른 약주. 선물용 상자 포함.", 22000, 20, 19000L, null, null, "physical", "on_sale");
+        product(brew, takju, "한울 탁주 원주 375ml", "물을 타지 않은 진한 원주.", 15000, 30);
+        product(brew, takju, "한울 생막걸리 6병 묶음", "생막걸리 750ml 여섯 병.", 45000, 15);
 
-        product(orchard, alcohol, "달빛 사과 와인 375ml", "가을 사과로 빚은 달지 않은 와인.", 18000, 25);
-        product(orchard, alcohol, "달빛 오미자주 500ml", "오미자의 다섯 가지 맛을 담은 술.", 24000, 18);
-        product(orchard, alcohol, "달빛 복분자주 375ml", "진한 색과 향의 복분자주. 기간 할인 중.", 16000, 40, 14000L,
-                today.minusDays(3), today.plusDays(10), "physical", "active");
-        product(orchard, alcohol, "달빛 과실주 선물 세트", "사과 와인과 오미자주 두 병 세트.", 39000, 10);
+        product(orchard, fruit, "달빛 사과 와인 375ml", "가을 사과로 빚은 달지 않은 와인.", 18000, 25);
+        product(orchard, fruit, "달빛 오미자주 500ml", "오미자의 다섯 가지 맛을 담은 술.", 24000, 18);
+        product(orchard, fruit, "달빛 복분자주 375ml", "진한 색과 향의 복분자주. 기간 할인 중.", 16000, 40, 14000L,
+                today.minusDays(3), today.plusDays(10), "physical", "on_sale");
+        product(orchard, gift, "달빛 과실주 선물 세트", "사과 와인과 오미자주 두 병 세트.", 39000, 10);
 
         product(cups, cup, "백자 술잔 2개 세트", "물레로 빚은 백자 술잔 두 개.", 18000, 30);
-        product(cups, cup, "분청 주병", "막걸리와 약주 모두 어울리는 주병.", 35000, 10);
+        product(cups, jug, "분청 주병", "막걸리와 약주 모두 어울리는 주병.", 35000, 10);
         product(cups, cup, "유리 막걸리잔 4개", "입이 넓은 유리 막걸리잔 네 개.", 16000, 40);
-        product(cups, cup, "옹기 술독 5L", "숨 쉬는 옹기 술독. 집에서 빚기 좋은 크기.", 68000, 6);
-        product(cups, cup, "나무 술받침", "호두나무로 깎은 술받침.", 12000, 25);
-        product(cups, cup, "주병·술잔 세트", "분청 주병 하나와 술잔 두 개.", 52000, 8, 46000L, null, null, "physical", "active");
+        product(cups, pot, "옹기 술독 5L", "숨 쉬는 옹기 술독. 집에서 빚기 좋은 크기.", 68000, 6);
+        product(cups, prop, "나무 술받침", "호두나무로 깎은 술받침.", 12000, 25);
+        product(cups, jug, "주병·술잔 세트", "분청 주병 하나와 술잔 두 개.", 52000, 8, 46000L, null, null, "physical", "on_sale");
 
-        product(supplies, raw, "전통 누룩 1kg", "밀로 띄운 전통 누룩.", 12000, 100);
-        product(supplies, raw, "술빚기용 찹쌀 4kg", "고두밥 짓기 좋은 햇찹쌀.", 21000, 60);
-        product(supplies, raw, "입국 500g", "쌀에 띄운 입국. 깔끔한 맛을 낼 때 씁니다.", 9000, 80);
-        product(supplies, raw, "건조 효모 100g", "발효가 안정적인 건조 효모.", 7000, 120);
-        product(supplies, raw, "쌀누룩 300g", "다음 입고를 기다리는 품절 상품입니다.", 6000, 0);
-        product(supplies, tool, "발효조 20L", "에어락이 달린 발효조.", 35000, 15);
-        product(supplies, tool, "유리 발효병 5L", "소량으로 빚을 때 쓰는 유리병.", 14000, 30);
-        product(supplies, tool, "비중계·온도계 세트", "발효 상태를 확인하는 기본 도구.", 19000, 20);
-        product(supplies, tool, "면보·거름망 세트", "술을 거를 때 쓰는 면보와 거름망.", 8000, 50);
+        product(supplies, starter, "전통 누룩 1kg", "밀로 띄운 전통 누룩.", 12000, 100);
+        product(supplies, grain, "술빚기용 찹쌀 4kg", "고두밥 짓기 좋은 햇찹쌀.", 21000, 60);
+        product(supplies, starter, "입국 500g", "쌀에 띄운 입국. 깔끔한 맛을 낼 때 씁니다.", 9000, 80);
+        product(supplies, starter, "건조 효모 100g", "발효가 안정적인 건조 효모.", 7000, 120);
+        product(supplies, starter, "쌀누룩 300g", "다음 입고를 기다리는 품절 상품입니다.", 6000, 0);
+        product(supplies, vessel, "발효조 20L", "에어락이 달린 발효조.", 35000, 15);
+        product(supplies, vessel, "유리 발효병 5L", "소량으로 빚을 때 쓰는 유리병.", 14000, 30);
+        product(supplies, gauge, "비중계·온도계 세트", "발효 상태를 확인하는 기본 도구.", 19000, 20);
+        product(supplies, filter, "면보·거름망 세트", "술을 거를 때 쓰는 면보와 거름망.", 8000, 50);
         product(supplies, lesson, "막걸리 빚기 하루 수업", "재료 제공, 빚은 술은 가져갑니다. 날짜는 주문 후 안내.", 40000, 12,
-                null, null, null, "ticket", "active");
+                null, null, null, "ticket", "on_sale");
         product(supplies, lesson, "약주 거르기 반나절 수업", "빚어 둔 술을 거르고 병에 담는 수업.", 30000, 10,
-                null, null, null, "ticket", "active");
-        product(supplies, tool, "준비 중인 상품", "아직 공개하지 않은 상품 예시입니다.", 10000, 5,
-                null, null, null, "physical", "hidden");
+                null, null, null, "ticket", "on_sale");
+        product(supplies, vessel, "준비 중인 상품", "아직 공개하지 않은 상품 예시입니다.", 10000, 5,
+                null, null, null, "physical", "paused");
+        product(supplies, gauge, "당도계", "아직 쓰는 중인 임시저장 상품 예시입니다.", 23000, 0,
+                null, null, null, "physical", "draft");
+        attributes();
+    }
+
+    /** 주류 속성(도수, 용량, 원재료 산지)과 꾸민 설명 예시 */
+    private void attributes() {
+        attr("한울 생막걸리 750ml", "6.0", 750, "국내산 쌀");
+        attr("한울 약주 500ml", "13.0", 500, "국내산 쌀");
+        attr("한울 탁주 원주 375ml", "12.0", 375, "국내산 쌀");
+        attr("한울 생막걸리 6병 묶음", "6.0", 4500, "국내산 쌀");
+        attr("달빛 사과 와인 375ml", "11.0", 375, "국내산 사과");
+        attr("달빛 오미자주 500ml", "15.0", 500, "국내산 오미자");
+        attr("달빛 복분자주 375ml", "14.0", 375, "국내산 복분자");
+        db.sql("UPDATE product SET description_doc = :doc WHERE name = '한울 생막걸리 750ml'").param("doc", """
+                {"type":"doc","content":[
+                 {"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"지역 쌀로 빚은 생막걸리"}]},
+                 {"type":"paragraph","content":[{"type":"text","text":"전통 누룩으로 "},{"type":"text","marks":[{"type":"bold"}],"text":"열흘 동안"},{"type":"text","text":" 천천히 익혔습니다. 살균하지 않아 효모가 살아 있습니다."}]},
+                 {"type":"bulletList","content":[
+                  {"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"받으면 바로 냉장 보관해 주세요."}]}]},
+                  {"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"병을 세워 두고, 마시기 전에 가볍게 흔들어 주세요."}]}]},
+                  {"type":"listItem","content":[{"type":"paragraph","content":[{"type":"text","text":"제조일로부터 30일 안에 드세요."}]}]}]}]}
+                """).update();
+    }
+
+    private void attr(String name, String abv, int volumeMl, String origin) {
+        db.sql("UPDATE product SET abv = :abv, volume_ml = :vol, origin = :origin WHERE name = :n")
+                .param("abv", new java.math.BigDecimal(abv)).param("vol", volumeMl).param("origin", origin).param("n", name).update();
     }
 
     // ---- 주문, 청구서, 게시글 ----
@@ -246,7 +286,7 @@ public class SampleData implements ApplicationRunner {
     }
 
     private void product(long sellerId, long categoryId, String name, String description, long price, int stock) {
-        product(sellerId, categoryId, name, description, price, stock, null, null, null, "physical", "active");
+        product(sellerId, categoryId, name, description, price, stock, null, null, null, "physical", "on_sale");
     }
 
     private void product(long sellerId, long categoryId, String name, String description, long price, int stock,

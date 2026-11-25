@@ -18,6 +18,11 @@ public final class Text {
         return s.length() > max ? s.substring(0, max) : s;
     }
 
+    /** 값이 목록 안에 있는지. null 이면 false (List.of(...).contains(null) 은 오류를 내므로 이것을 쓴다). */
+    public static boolean in(String v, java.util.List<String> allowed) {
+        return v != null && allowed.contains(v);
+    }
+
     /** yyyy-MM-dd 형식이 아니면 null */
     public static LocalDate date(String v) {
         if (v == null || v.isBlank()) {

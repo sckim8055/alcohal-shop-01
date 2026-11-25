@@ -63,6 +63,23 @@ public class Api {
         return run(MockMvcRequestBuilders.put(path), body, true);
     }
 
+    /** 파일 올리기 */
+    public Res upload(String fileName, byte[] content) {
+        try {
+            var builder = MockMvcRequestBuilders.multipart("/api/files")
+                    .file(new org.springframework.mock.web.MockMultipartFile("file", fileName, "application/octet-stream", content));
+            builder.session(session);
+            if (csrf != null) {
+                builder.header("X-CSRF-Token", csrf);
+            }
+            MockHttpServletResponse response = mvc.perform(builder).andReturn().getResponse();
+            String text = response.getContentAsString(StandardCharsets.UTF_8);
+            return new Res(response.getStatus(), text.isEmpty() ? JSON.nullNode() : JSON.readTree(text));
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     /** 토큰 없이 보내는 요청(위조 요청 흉내) */
     public Res postWithoutToken(String path, Object body) {
         return run(MockMvcRequestBuilders.post(path), body, false);
@@ -80,6 +97,10 @@ public class Api {
             MockHttpServletResponse response = mvc.perform(builder).andReturn().getResponse();
             String text = response.getContentAsString(StandardCharsets.UTF_8);
             JsonNode node = text.isEmpty() ? JSON.nullNode() : JSON.readTree(text);
+            // 로그인하거나 비밀번호를 바꾸면 토큰이 새로 나온다. 브라우저 쪽 코드와 같게 따라간다.
+            if (response.getStatus() == 200 && node.isObject() && node.has("csrfToken")) {
+                csrf = node.get("csrfToken").asString();
+            }
             return new Res(response.getStatus(), node);
         } catch (Exception e) {
             throw new IllegalStateException(e);

@@ -44,7 +44,7 @@ public class CartController {
         Member user = auth.requireUser(request);
         int qty = body.qty() == null ? 1 : body.qty();
         ProductView p = body.productId() == null ? null : catalog.find(body.productId());
-        if (p == null || !"active".equals(p.status()) || !"approved".equals(p.sellerStatus()) || qty < 1 || qty > 99) {
+        if (p == null || !p.onSale() || qty < 1 || qty > 99) {
             throw ApiException.bad("담을 수 없는 상품입니다.");
         }
         orders.addToCart(user.id(), p.id(), qty);

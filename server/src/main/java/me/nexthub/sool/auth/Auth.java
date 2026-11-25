@@ -66,8 +66,24 @@ public class Auth {
         return s;
     }
 
+    /** 세션에 적힌 발급 번호가 회원의 현재 번호와 같을 때만 로그인으로 인정한다. */
+    Member loadForSession(long memberId, int epoch) {
+        Integer current = epochOf(memberId);
+        return current != null && current == epoch ? load(memberId) : null;
+    }
+
+    public Integer epochOf(long memberId) {
+        return db.sql("SELECT session_epoch FROM member WHERE id = :id").param("id", memberId)
+                .query(Integer.class).optional().orElse(null);
+    }
+
+    /** 이 회원의 모든 로그인 세션을 무효로 만든다. */
+    public void expireSessions(long memberId) {
+        db.sql("UPDATE member SET session_epoch = session_epoch + 1 WHERE id = :id").param("id", memberId).update();
+    }
+
     public Member load(long memberId) {
-        return db.sql("SELECT id, email, name, role, adult_verified_at FROM member WHERE id = :id AND tenant_id = :t")
+        return db.sql("SELECT id, email, name, role, adult_verified_at FROM member WHERE id = :id AND tenant_id = :t AND status = 'active'")
                 .param("id", memberId).param("t", tenant.id())
                 .query(Member.class).optional().orElse(null);
     }

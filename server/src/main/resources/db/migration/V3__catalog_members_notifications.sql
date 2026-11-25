@@ -1,0 +1,130 @@
+-- 2단계: 분류 체계, 상품 상태·속성·사진/동영상, 회원 상태와 로그인 잠금, 알림.
+
+-- ---- 분류: 대분류 아래에 중분류를 둔다 ----
+ALTER TABLE category DROP CONSTRAINT uq_category_name;
+ALTER TABLE category ADD COLUMN parent_id BIGINT;
+ALTER TABLE category ADD COLUMN sort_order INT NOT NULL DEFAULT 0;
+ALTER TABLE category ADD COLUMN active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE category ADD CONSTRAINT fk_category_parent FOREIGN KEY (parent_id) REFERENCES category (id);
+
+UPDATE category SET sort_order = 1 WHERE name = '전통주';
+UPDATE category SET sort_order = 2 WHERE name = '원재료';
+UPDATE category SET sort_order = 3 WHERE name = '양조 기구';
+UPDATE category SET sort_order = 4 WHERE name = '술잔·주기';
+UPDATE category SET sort_order = 5 WHERE name = '강의·체험';
+
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '탁주·막걸리', TRUE, 1 FROM category WHERE tenant_id = 1 AND name = '전통주' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '약주·청주', TRUE, 2 FROM category WHERE tenant_id = 1 AND name = '전통주' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '증류주·소주', TRUE, 3 FROM category WHERE tenant_id = 1 AND name = '전통주' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '과실주·와인', TRUE, 4 FROM category WHERE tenant_id = 1 AND name = '전통주' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '선물 세트', TRUE, 5 FROM category WHERE tenant_id = 1 AND name = '전통주' AND parent_id IS NULL;
+
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '누룩·효모', FALSE, 1 FROM category WHERE tenant_id = 1 AND name = '원재료' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '쌀·곡물', FALSE, 2 FROM category WHERE tenant_id = 1 AND name = '원재료' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '부재료', FALSE, 3 FROM category WHERE tenant_id = 1 AND name = '원재료' AND parent_id IS NULL;
+
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '발효 용기', FALSE, 1 FROM category WHERE tenant_id = 1 AND name = '양조 기구' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '계측 도구', FALSE, 2 FROM category WHERE tenant_id = 1 AND name = '양조 기구' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '거름·병입 도구', FALSE, 3 FROM category WHERE tenant_id = 1 AND name = '양조 기구' AND parent_id IS NULL;
+
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '술잔', FALSE, 1 FROM category WHERE tenant_id = 1 AND name = '술잔·주기' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '주병·주전자', FALSE, 2 FROM category WHERE tenant_id = 1 AND name = '술잔·주기' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '술독·항아리', FALSE, 3 FROM category WHERE tenant_id = 1 AND name = '술잔·주기' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '소품', FALSE, 4 FROM category WHERE tenant_id = 1 AND name = '술잔·주기' AND parent_id IS NULL;
+
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '빚기 수업', FALSE, 1 FROM category WHERE tenant_id = 1 AND name = '강의·체험' AND parent_id IS NULL;
+INSERT INTO category (tenant_id, parent_id, name, is_alcohol, sort_order)
+SELECT 1, id, '시음·양조장 방문', FALSE, 2 FROM category WHERE tenant_id = 1 AND name = '강의·체험' AND parent_id IS NULL;
+
+-- ---- 상품: 상태를 늘리고, 꾸민 설명과 주류 속성을 둔다 ----
+-- draft 임시저장, on_sale 판매 중, paused 판매 중지, ended 판매 종료, blocked 운영자 차단
+ALTER TABLE product DROP CONSTRAINT ck_product_status;
+UPDATE product SET status = 'on_sale' WHERE status = 'active';
+UPDATE product SET status = 'paused' WHERE status = 'hidden';
+ALTER TABLE product ALTER COLUMN status SET DEFAULT 'draft';
+ALTER TABLE product ADD CONSTRAINT ck_product_status CHECK (status IN ('draft', 'on_sale', 'paused', 'ended', 'blocked'));
+ALTER TABLE product ADD COLUMN description_doc MEDIUMTEXT;
+ALTER TABLE product ADD COLUMN abv DECIMAL(4, 1);
+ALTER TABLE product ADD COLUMN volume_ml INT;
+ALTER TABLE product ADD COLUMN origin VARCHAR(60) NOT NULL DEFAULT '';
+
+CREATE TABLE upload_file (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id    BIGINT      NOT NULL,
+    member_id    BIGINT      NOT NULL,
+    stored_name  VARCHAR(80) NOT NULL,
+    kind         VARCHAR(10) NOT NULL,
+    content_type VARCHAR(60) NOT NULL,
+    size_bytes   BIGINT      NOT NULL,
+    created_at   DATETIME(6) NOT NULL,
+    CONSTRAINT uq_upload_name UNIQUE (stored_name),
+    CONSTRAINT fk_upload_member FOREIGN KEY (member_id) REFERENCES member (id)
+);
+
+-- kind: image 사진, video 올린 동영상, youtube 유튜브(영상 번호만 저장). 순서가 가장 앞선 사진이 대표 사진이다.
+CREATE TABLE product_media (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    product_id BIGINT       NOT NULL,
+    kind       VARCHAR(10)  NOT NULL,
+    url        VARCHAR(300) NOT NULL,
+    sort_order INT          NOT NULL,
+    CONSTRAINT fk_media_product FOREIGN KEY (product_id) REFERENCES product (id),
+    CONSTRAINT ck_media_kind CHECK (kind IN ('image', 'video', 'youtube'))
+);
+CREATE INDEX idx_media_product ON product_media (product_id, sort_order);
+
+-- ---- 회원: 상태와 로그인 잠금 ----
+ALTER TABLE member ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT 'active';
+ALTER TABLE member ADD CONSTRAINT ck_member_status CHECK (status IN ('active', 'suspended', 'withdrawn'));
+ALTER TABLE member ADD COLUMN failed_logins INT NOT NULL DEFAULT 0;
+ALTER TABLE member ADD COLUMN locked_until DATETIME(6);
+ALTER TABLE member ADD COLUMN last_login_at DATETIME(6);
+-- 비밀번호를 바꾸거나 계정을 정지하면 값을 올려, 그 전에 만든 로그인 세션을 모두 무효로 만든다.
+ALTER TABLE member ADD COLUMN session_epoch INT NOT NULL DEFAULT 0;
+
+-- ---- 알림 ----
+-- 사이트 안 알림(종 모양). 읽으면 read_at 이 채워진다.
+CREATE TABLE notification (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id  BIGINT       NOT NULL,
+    member_id  BIGINT       NOT NULL,
+    title      VARCHAR(100) NOT NULL,
+    body       VARCHAR(500) NOT NULL,
+    link       VARCHAR(200) NOT NULL DEFAULT '',
+    read_at    DATETIME(6),
+    created_at DATETIME(6)  NOT NULL,
+    CONSTRAINT fk_notification_member FOREIGN KEY (member_id) REFERENCES member (id)
+);
+CREATE INDEX idx_notification_member ON notification (member_id, id);
+
+-- 사이트 밖으로 보낼 메시지(메일, 문자). 실제 발송 서비스가 연결되기 전에는 status 가 logged 로 남는다.
+CREATE TABLE message_outbox (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id  BIGINT        NOT NULL,
+    member_id  BIGINT        NOT NULL,
+    channel    VARCHAR(10)   NOT NULL,
+    recipient  VARCHAR(190)  NOT NULL,
+    subject    VARCHAR(200)  NOT NULL,
+    body       VARCHAR(2000) NOT NULL,
+    status     VARCHAR(10)   NOT NULL,
+    created_at DATETIME(6)   NOT NULL,
+    sent_at    DATETIME(6),
+    CONSTRAINT ck_outbox_channel CHECK (channel IN ('email', 'sms')),
+    CONSTRAINT ck_outbox_status CHECK (status IN ('pending', 'sent', 'failed', 'logged'))
+);

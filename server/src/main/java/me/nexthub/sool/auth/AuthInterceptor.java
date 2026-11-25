@@ -22,6 +22,7 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     static final String SESSION_UID = "uid";
     static final String SESSION_CSRF = "csrf";
+    static final String SESSION_EPOCH = "epoch";
     public static final String CSRF_HEADER = "X-CSRF-Token";
 
     private final Auth auth;
@@ -32,9 +33,11 @@ public class AuthInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        response.setHeader("X-Content-Type-Options", "nosniff");
         HttpSession session = request.getSession(false);
-        if (session != null && session.getAttribute(SESSION_UID) instanceof Long uid) {
-            request.setAttribute(Auth.USER_ATTR, auth.load(uid));
+        if (session != null && session.getAttribute(SESSION_UID) instanceof Long uid
+                && session.getAttribute(SESSION_EPOCH) instanceof Integer epoch) {
+            request.setAttribute(Auth.USER_ATTR, auth.loadForSession(uid, epoch));
         }
         String method = request.getMethod();
         boolean readOnly = "GET".equals(method) || "HEAD".equals(method) || "OPTIONS".equals(method);

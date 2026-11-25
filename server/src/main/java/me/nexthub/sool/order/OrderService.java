@@ -14,8 +14,10 @@ import me.nexthub.sool.catalog.Catalog;
 import me.nexthub.sool.common.ApiException;
 import me.nexthub.sool.common.AppClock;
 import me.nexthub.sool.common.Db;
+import me.nexthub.sool.common.Paged;
 import me.nexthub.sool.common.Tenant;
 import me.nexthub.sool.common.Text;
+import me.nexthub.sool.notify.NotificationService;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -39,8 +41,11 @@ public class OrderService {
     private final Tenant tenant;
     private final AppClock clock;
     private final TrackingService tracking;
+    private final NotificationService notifications;
 
-    public OrderService(JdbcClient db, Tenant tenant, AppClock clock, TrackingService tracking) {
+    public OrderService(JdbcClient db, Tenant tenant, AppClock clock, TrackingService tracking,
+                        NotificationService notifications) {
+        this.notifications = notifications;
         this.db = db;
         this.tenant = tenant;
         this.clock = clock;
@@ -92,7 +97,7 @@ public class OrderService {
     }
 
     private static boolean orderable(CartLine l) {
-        return "active".equals(l.status()) && "approved".equals(l.sellerStatus());
+        return "on_sale".equals(l.status()) && "approved".equals(l.sellerStatus());
     }
 
     /** 판매자별 배송비: 실물 상품이 없으면 0, 무료배송 행사 기간이거나 기준 금액 이상이면 0 */
@@ -217,6 +222,10 @@ public class OrderService {
             }
         }
         db.sql("DELETE FROM cart_item WHERE member_id = :m").param("m", user.id()).update();
+        for (Party p : partiesOfOrder(orderId)) {
+            notifications.notifyWithMail(p.sellerMemberId(), "새 주문이 들어왔습니다",
+                    "주문 " + p.orderNo() + ", 받을 금액 " + won(p.total()) + ". 입금을 확인한 뒤 처리해 주세요.", "/seller/orders");
+        }
         return orderId;
     }
 
@@ -228,6 +237,33 @@ public class OrderService {
     }
 
     // ---- 상태 변경 ----
+
+    /** 알림을 보낼 때 필요한 주문의 당사자 정보 */
+    private record Party(long subId, long orderId, String orderNo, long buyerId, long sellerMemberId, String shopName,
+                         long total) {
+    }
+
+    private static final String PARTY_SELECT = """
+            SELECT so.id AS sub_id, o.id AS order_id, o.order_no, o.buyer_id, s.member_id AS seller_member_id,
+                   s.shop_name, so.total
+              FROM sub_order so JOIN shop_order o ON o.id = so.order_id JOIN seller s ON s.id = so.seller_id
+            """;
+
+    private Party party(long subId) {
+        return db.sql(PARTY_SELECT + " WHERE so.id = :id").param("id", subId).query(Party.class).single();
+    }
+
+    private List<Party> partiesOfOrder(long orderId) {
+        return db.sql(PARTY_SELECT + " WHERE so.order_id = :o").param("o", orderId).query(Party.class).list();
+    }
+
+    private static String won(long amount) {
+        return String.format("%,d원", amount);
+    }
+
+    private static String orderLink(Party p) {
+        return "/orders/" + p.orderId();
+    }
 
     private static void mustChange(int changed, String message) {
         if (changed != 1) {
@@ -255,6 +291,9 @@ public class OrderService {
                    AND order_id IN (SELECT id FROM shop_order WHERE buyer_id = :b)
                 """).param("n", depositor).param("now", clock.now()).param("id", subId).param("b", buyerId).update(),
                 NOT_ALLOWED);
+        Party p = party(subId);
+        notifications.notifyWithMail(p.sellerMemberId(), "입금했다는 알림이 왔습니다",
+                "주문 " + p.orderNo() + ", 입금자명 " + depositor + ", " + won(p.total()) + ". 통장을 확인해 주세요.", "/seller/orders");
     }
 
     /** 구매자: 입금 신고 전 취소 */
@@ -267,6 +306,8 @@ public class OrderService {
                 """).param("now", clock.now()).param("id", subId).param("b", buyerId).update(),
                 "입금 신고 후에는 판매자에게 취소를 요청해 주세요.");
         restoreStock(subId);
+        Party p = party(subId);
+        notifications.notify(p.sellerMemberId(), "주문이 취소되었습니다", "주문 " + p.orderNo() + "을 구매자가 취소했습니다.", "/seller/orders");
     }
 
     /** 판매자: 입금 확인. 현금영수증 승인번호는 선택 입력 */
@@ -277,6 +318,9 @@ public class OrderService {
                  WHERE id = :id AND seller_id = :s AND status = 'awaiting_deposit'
                 """).param("now", clock.now()).param("a", approval.isEmpty() ? null : approval)
                 .param("id", subId).param("s", sellerId).update(), NOT_ALLOWED);
+        Party p = party(subId);
+        notifications.notifyWithMail(p.buyerId(), "입금이 확인되었습니다",
+                p.shopName() + "에서 주문 " + p.orderNo() + "의 입금 " + won(p.total()) + "을 확인했습니다.", orderLink(p));
     }
 
     /** 판매자: 발송(실물 상품) */
@@ -291,6 +335,9 @@ public class OrderService {
                  WHERE id = :id AND seller_id = :s AND status = 'paid' AND has_physical = TRUE
                 """).param("c", carrier).param("n", trackingNo).param("now", clock.now())
                 .param("id", subId).param("s", sellerId).update(), NOT_ALLOWED);
+        Party p = party(subId);
+        notifications.notifyWithMail(p.buyerId(), "상품을 보냈습니다",
+                p.shopName() + "에서 주문 " + p.orderNo() + "을 발송했습니다. 송장번호 " + trackingNo, orderLink(p));
     }
 
     /** 판매자: 수업·이용권처럼 배송이 없는 주문의 전달 완료 */
@@ -299,6 +346,8 @@ public class OrderService {
                 UPDATE sub_order SET status = 'delivered', delivered_at = :now
                  WHERE id = :id AND seller_id = :s AND status = 'paid' AND has_physical = FALSE
                 """).param("now", clock.now()).param("id", subId).param("s", sellerId).update(), NOT_ALLOWED);
+        Party p = party(subId);
+        notifications.notify(p.buyerId(), "전달이 완료되었습니다", p.shopName() + "에서 주문 " + p.orderNo() + "을 전달 완료로 처리했습니다.", orderLink(p));
     }
 
     /** 구매자: 수령 확인(구매확정) */
@@ -320,12 +369,20 @@ public class OrderService {
                 """).param("now", clock.now()).param("id", subId).param("s", sellerId).update();
         if (beforeShipping == 1) {
             restoreStock(subId);
+            notifyRefund(subId);
             return;
         }
         mustChange(db.sql("""
                 UPDATE sub_order SET status = 'refunded', closed_at = :now, close_reason = '판매자 환불'
                  WHERE id = :id AND seller_id = :s AND status IN ('shipped', 'delivered')
                 """).param("now", clock.now()).param("id", subId).param("s", sellerId).update(), NOT_ALLOWED);
+        notifyRefund(subId);
+    }
+
+    private void notifyRefund(long subId) {
+        Party p = party(subId);
+        notifications.notifyWithMail(p.buyerId(), "환불 처리되었습니다",
+                p.shopName() + "에서 주문 " + p.orderNo() + "을 환불로 기록했습니다. 환불금 " + won(p.total()) + "이 들어왔는지 확인해 주세요.", orderLink(p));
     }
 
     // ---- 기한 처리 ----
@@ -356,6 +413,10 @@ public class OrderService {
             if (changed == 1) {
                 restoreStock(id);
                 cancelled++;
+                Party p = party(id);
+                notifications.notifyWithMail(p.buyerId(), "입금 기한이 지나 주문이 취소되었습니다",
+                        p.shopName() + " 주문 " + p.orderNo() + "이 자동으로 취소되었습니다.", orderLink(p));
+                notifications.notify(p.sellerMemberId(), "입금 기한이 지나 주문이 취소되었습니다", "주문 " + p.orderNo(), "/seller/orders");
             }
         }
 
@@ -400,13 +461,19 @@ public class OrderService {
         return order == null ? null : withSubs(order);
     }
 
-    public List<OrderDetail> listForBuyer(long buyerId) {
+    /** from(포함)부터 to(제외)까지 주문한 것. 둘 다 null 이면 전체 기간. */
+    public Paged<OrderDetail> listForBuyer(long buyerId, LocalDateTime from, LocalDateTime to, int page, int size) {
+        String where = " WHERE buyer_id = :b AND (:from IS NULL OR created_at >= :from) AND (:to IS NULL OR created_at < :to)";
+        long total = db.sql("SELECT COUNT(*) FROM shop_order" + where)
+                .param("b", buyerId).param("from", from).param("to", to).query(Long.class).single();
         List<OrderDetail> result = new ArrayList<>();
-        for (OrderDetail.Order o : db.sql(ORDER_SELECT + " WHERE buyer_id = :b ORDER BY id DESC LIMIT 100")
-                .param("b", buyerId).query(OrderDetail.Order.class).list()) {
+        for (OrderDetail.Order o : db.sql(ORDER_SELECT + where + " ORDER BY id DESC LIMIT :limit OFFSET :offset")
+                .param("b", buyerId).param("from", from).param("to", to)
+                .param("limit", size).param("offset", Paged.offset(page, size))
+                .query(OrderDetail.Order.class).list()) {
             result.add(withSubs(o));
         }
-        return result;
+        return new Paged<>(result, page, size, total);
     }
 
     private OrderDetail withSubs(OrderDetail.Order order) {
@@ -430,14 +497,19 @@ public class OrderService {
     public record SellerOrder(OrderDetail.Order order, OrderDetail.Sub sub) {
     }
 
-    public List<SellerOrder> listForSeller(long sellerId) {
+    /** status 가 null 이면 모든 상태 */
+    public Paged<SellerOrder> listForSeller(long sellerId, String status, int page, int size) {
+        String where = " WHERE so.seller_id = :s AND (:st IS NULL OR so.status = :st)";
+        long total = db.sql("SELECT COUNT(*) FROM sub_order so" + where)
+                .param("s", sellerId).param("st", status).query(Long.class).single();
         List<SellerOrder> result = new ArrayList<>();
-        for (OrderDetail.SubRow s : db.sql(SUB_SELECT + " WHERE so.seller_id = :s ORDER BY so.id DESC LIMIT 200")
-                .param("s", sellerId).query(OrderDetail.SubRow.class).list()) {
+        for (OrderDetail.SubRow s : db.sql(SUB_SELECT + where + " ORDER BY so.id DESC LIMIT :limit OFFSET :offset")
+                .param("s", sellerId).param("st", status).param("limit", size).param("offset", Paged.offset(page, size))
+                .query(OrderDetail.SubRow.class).list()) {
             OrderDetail.Order o = db.sql(ORDER_SELECT + " WHERE id = :id").param("id", s.orderId())
                     .query(OrderDetail.Order.class).single();
             result.add(new SellerOrder(o, toSub(s)));
         }
-        return result;
+        return new Paged<>(result, page, size, total);
     }
 }

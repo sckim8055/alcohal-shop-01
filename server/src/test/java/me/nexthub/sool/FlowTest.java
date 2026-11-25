@@ -180,7 +180,7 @@ class FlowTest {
 
         assertEquals(48, stock(MAKGEOLLI));
         assertEquals(0, api.get("/api/cart").body().get("groups").size());
-        assertEquals(1, api.get("/api/orders").body().size());
+        assertEquals(1, api.get("/api/orders").body().get("items").size());
     }
 
     @Test
@@ -325,9 +325,9 @@ class FlowTest {
         String name = "달빛 복분자주 375ml";
         Api api = as("buyer@test.local");
         long id = sample.productId(name);
-        assertEquals(14000, api.get("/api/products/" + id).body().get("currentPrice").asLong());
+        assertEquals(14000, api.get("/api/products/" + id).body().get("product").get("currentPrice").asLong());
         clock.advance(Duration.ofDays(11));
-        assertEquals(16000, api.get("/api/products/" + id).body().get("currentPrice").asLong());
+        assertEquals(16000, api.get("/api/products/" + id).body().get("product").get("currentPrice").asLong());
     }
 
     @Test
@@ -372,12 +372,12 @@ class FlowTest {
     @Test
     @DisplayName("주류는 면허가 확인된 판매자만 등록할 수 있다")
     void alcoholLicenseGate() {
-        long alcohol = db.sql("SELECT id FROM category WHERE name = '전통주'").query(Long.class).single();
+        long alcohol = db.sql("SELECT id FROM category WHERE name = '탁주·막걸리'").query(Long.class).single();
         Map<String, Object> product = Map.of("categoryId", alcohol, "name", "새 술", "price", 10000, "stock", 5);
         assertEquals(403, as("cups@test.local").post("/api/seller/products", product).status());
         Api.Res ok = as("brewery@test.local").post("/api/seller/products", product);
         assertEquals(200, ok.status());
-        assertEquals("새 술", ok.body().get("name").asString());
+        assertEquals("새 술", ok.body().get("product").get("name").asString());
 
         Map<String, Object> ticket = new HashMap<>(product);
         ticket.put("productType", "ticket");
@@ -413,7 +413,7 @@ class FlowTest {
         long id = sample.productId(MAKGEOLLI);
         Map<String, Object> change = Map.of("categoryId", 2, "name", "바꿔치기", "price", 1, "stock", 1);
         assertEquals(404, as("cups@test.local").put("/api/seller/products/" + id, change).status());
-        assertEquals(8000, as("buyer@test.local").get("/api/products/" + id).body().get("price").asLong());
+        assertEquals(8000, as("buyer@test.local").get("/api/products/" + id).body().get("product").get("price").asLong());
     }
 
     // ---- 운영자 ----
@@ -465,10 +465,10 @@ class FlowTest {
     @DisplayName("면허 확인을 취소하면 주류 상품이 숨겨진다")
     void licenseRevokeHidesAlcohol() {
         Api admin = as("admin@test.local");
-        assertTrue(admin.get("/api/products").body().toString().contains(MAKGEOLLI));
+        assertTrue(admin.get("/api/products?q=생막걸리").body().toString().contains(MAKGEOLLI));
         long sellerId = sample.sellerId("한울 양조장");
         assertEquals(200, admin.post("/api/admin/sellers/" + sellerId + "/license", Map.of("verified", false)).status());
-        assertFalse(admin.get("/api/products").body().toString().contains(MAKGEOLLI));
+        assertFalse(admin.get("/api/products?q=생막걸리").body().toString().contains(MAKGEOLLI));
         assertEquals(404, admin.get("/api/products/" + sample.productId(MAKGEOLLI)).status());
     }
 
@@ -476,7 +476,8 @@ class FlowTest {
     @DisplayName("심사 중이거나 숨긴 상품은 목록과 장바구니에 나오지 않는다")
     void hiddenProducts() {
         Api buyer = as("buyer@test.local");
-        assertFalse(buyer.get("/api/products").body().toString().contains("준비 중인 상품"));
+        assertFalse(buyer.get("/api/products?q=준비").body().toString().contains("준비 중인 상품"));
+        assertFalse(buyer.get("/api/products?q=당도계").body().toString().contains("당도계"));   // 임시저장
         long hidden = sample.productId("준비 중인 상품");
         assertEquals(404, buyer.get("/api/products/" + hidden).status());
         assertEquals(400, buyer.post("/api/cart/items", Map.of("productId", hidden, "qty", 1)).status());
@@ -504,6 +505,6 @@ class FlowTest {
         assertTrue(dash.get("recentSubs").size() >= 9);
         assertTrue(dash.get("invoices").size() >= 2);
         assertEquals(5, admin.get("/api/posts").body().size());
-        assertEquals(3, as("buyer@test.local").get("/api/orders").body().size());
+        assertEquals(3, as("buyer@test.local").get("/api/orders").body().get("items").size());
     }
 }
