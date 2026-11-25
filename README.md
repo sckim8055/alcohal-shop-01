@@ -73,6 +73,7 @@ DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳,
 | 상품 | `GET /categories`, `/products?cat=&q=&sort=&page=`, `/products/{id}`, `/carriers` |
 | 내 정보 | `PUT /me`, `POST /me/password`, `GET /notifications`, `POST /notifications/read-all`, `/notifications/{id}/read` |
 | 파일 | `POST /files`(사진·동영상 올리기), `GET /files/{이름}` |
+| 쿠폰 | `GET /coupons`, `POST /coupons/{id}/claim`, `/coupons/redeem`, `GET /my/coupons`, `/checkout/coupons`, `GET·POST /seller/coupons`, `GET·POST /admin/coupons`, `POST /admin/coupons/{id}/grant` (규격: `docs/adr/0001-coupons.md`) |
 | 장바구니 | `GET /cart`, `POST /cart/items`, `PUT /cart/items/{productId}` |
 | 주문 | `POST /orders`, `GET /orders`, `/orders/{id}`, `/orders/{id}/receipt/{subId}` |
 | 구매자 처리 | `POST /suborders/{id}/report`, `/cancel`, `/receive` |

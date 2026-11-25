@@ -18,11 +18,12 @@ public record OrderDetail(Order order, List<Sub> subs) {
             LocalDateTime shippedAt, LocalDateTime deliveredAt, LocalDateTime completedAt,
             LocalDateTime closedAt, String closeReason,
             String shopName, String bizNo, String bankName, String bankAccount, String bankHolder, String payLink,
-            long sellerMemberId) {
+            long sellerMemberId,
+            long itemDiscount, long shipDiscount, String couponName, String couponIssuer) {
     }
 
     public record Item(long id, long subOrderId, long productId, String name, String productType,
-                       long unitPrice, int qty, int commissionRateBp) {
+                       long unitPrice, int qty, int commissionRateBp, long couponDiscount) {
     }
 
     public record Sub(SubRow sub, List<Item> items, TrackingService.Tracking tracking) {

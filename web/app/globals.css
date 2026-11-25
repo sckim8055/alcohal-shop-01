@@ -270,3 +270,22 @@ td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: t
 }
 
 .nowrap { white-space: nowrap; }
+
+/* ---- 쿠폰: 골판지 가격표와 같은 계열. 왼쪽 할인, 오른쪽 조건, 점선 절취선 하나 ---- */
+.tickets { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 330px), 1fr)); gap: 24px 22px; }
+.ticket { display: grid; grid-template-columns: minmax(120px, 0.85fr) minmax(0, 1.15fr); background: var(--cardboard); border: var(--line); box-shadow: var(--hard); transform: rotate(-0.6deg); }
+.tickets > .ticket:nth-child(even) { transform: rotate(0.5deg); }
+.ticket-face { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 6px; padding: 14px 14px 12px; border-right: 2px dashed var(--onggi); }
+.ticket-face strong { font-family: var(--display); font-weight: 400; font-size: 2rem; line-height: 1.1; color: var(--marker); }
+.ticket-face strong small { display: block; font-family: var(--hand); font-weight: 700; font-size: 1.05rem; color: var(--onggi); }
+.ticket-from { font-family: var(--hand); font-weight: 700; font-size: 1rem; }
+.ticket-terms { padding: 12px 14px; }
+.ticket-terms h3 { font-size: 1.2rem; margin-bottom: 4px; }
+.ticket-terms ul { list-style: none; margin: 0; padding: 0; font-size: 0.92rem; }
+.ticket-terms li::before { content: '· '; }
+.ticket-act { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.ticket.off { filter: grayscale(1); opacity: 0.7; box-shadow: none; }
+@media (max-width: 420px) {
+  .ticket { grid-template-columns: 1fr; }
+  .ticket-face { border-right: 0; border-bottom: 2px dashed var(--onggi); }
+}

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Stamp } from '@/components/Bits';
 import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
-import { when, won } from '@/lib/format';
+import { couponOff, when, won } from '@/lib/format';
 import type { OrderDetail, Paged } from '@/lib/types';
 
 export default function MyOrders() {
@@ -47,7 +47,10 @@ export default function MyOrders() {
                         <div className="small">{s.items.map((i) => i.name + ' × ' + i.qty).join(', ')}</div>
                         {s.tracking && <div className="muted small">{s.tracking.carrierName} {s.sub.trackingNo}, {s.tracking.steps[s.tracking.steps.length - 1]?.label}</div>}
                       </td>
-                      <td className="num">{won(s.sub.total)}</td>
+                      <td className="num">
+                        {won(s.sub.total)}
+                        {couponOff(s.sub) > 0 && <div className="muted small">쿠폰 할인 ({s.sub.couponName ?? '쿠폰'}) -{won(couponOff(s.sub))}</div>}
+                      </td>
                       <td className="right">
                         <Link className="btn plain small" href={'/orders/' + o.order.id}>{s.sub.status === 'awaiting_deposit' ? '입금 안내' : s.tracking ? '배송 조회' : '보기'}</Link>
                       </td>

@@ -4,10 +4,13 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import me.nexthub.sool.auth.Member;
 import me.nexthub.sool.catalog.Catalog;
@@ -17,6 +20,8 @@ import me.nexthub.sool.common.Db;
 import me.nexthub.sool.common.Paged;
 import me.nexthub.sool.common.Tenant;
 import me.nexthub.sool.common.Text;
+import me.nexthub.sool.coupon.CouponService;
+import me.nexthub.sool.coupon.MemberCoupon;
 import me.nexthub.sool.notify.NotificationService;
 
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -42,10 +47,12 @@ public class OrderService {
     private final AppClock clock;
     private final TrackingService tracking;
     private final NotificationService notifications;
+    private final CouponService coupons;
 
     public OrderService(JdbcClient db, Tenant tenant, AppClock clock, TrackingService tracking,
-                        NotificationService notifications) {
+                        NotificationService notifications, CouponService coupons) {
         this.notifications = notifications;
+        this.coupons = coupons;
         this.db = db;
         this.tenant = tenant;
         this.clock = clock;
@@ -155,10 +162,100 @@ public class OrderService {
         }
     }
 
+    // ---- 쿠폰 ----
+
+    /** 주문할 때 고른 쿠폰: 가게(sellerId)마다 회원 쿠폰 한 장 */
+    public record CouponChoice(Long sellerId, Long memberCouponId) {
+    }
+
+    /** 가게 묶음 하나에 적용할 쿠폰과 계산 결과 */
+    private record Applied(MemberCoupon held, CouponService.Quote quote) {
+        long discount() {
+            return quote.itemDiscount() + quote.shipDiscount();
+        }
+    }
+
+    private static Map<Long, List<CartLine>> bySeller(List<CartLine> lines) {
+        Map<Long, List<CartLine>> bySeller = new LinkedHashMap<>();
+        for (CartLine l : lines) {
+            bySeller.computeIfAbsent(l.sellerId(), k -> new ArrayList<>()).add(l);
+        }
+        return bySeller;
+    }
+
+    /** 쿠폰 계산용 묶음. 줄 순서는 sellerLines 와 같다(나눈 할인을 order_item 에 그대로 적기 위해). */
+    private static CouponService.Basket basket(CartSummary.Group g, List<CartLine> sellerLines, Map<Long, Long> parents) {
+        List<CouponService.Line> lines = new ArrayList<>();
+        for (CartLine l : sellerLines) {
+            lines.add(new CouponService.Line(l.categoryId(), parents.get(l.categoryId()), l.alcohol(), l.lineTotal()));
+        }
+        return new CouponService.Basket(g.sellerId(), g.shopName(), lines, g.shipFee());
+    }
+
+    /** 주문서: 지금 장바구니 기준으로 가게별로 쓸 수 있는 내 쿠폰 */
+    public List<CouponService.CheckoutGroup> checkoutCoupons(long memberId) {
+        List<CartLine> lines = cartLines(memberId);
+        CartSummary sum = summarize(lines);
+        Map<Long, List<CartLine>> bySeller = bySeller(lines);
+        Map<Long, Long> parents = coupons.categoryParents();
+        List<CouponService.Basket> baskets = new ArrayList<>();
+        for (CartSummary.Group g : sum.groups()) {
+            baskets.add(basket(g, bySeller.get(g.sellerId()), parents));
+        }
+        return coupons.options(memberId, baskets);
+    }
+
+    /** 고른 쿠폰을 확인하고 할인액을 계산한다. 하나라도 맞지 않으면 주문 전체를 받지 않는다. */
+    private Map<Long, Applied> applyCoupons(long memberId, List<CouponChoice> choices, CartSummary sum,
+                                            Map<Long, List<CartLine>> bySeller) {
+        Map<Long, Applied> result = new HashMap<>();
+        if (choices == null || choices.isEmpty()) {
+            return result;
+        }
+        Map<Long, CartSummary.Group> groups = new HashMap<>();
+        for (CartSummary.Group g : sum.groups()) {
+            groups.put(g.sellerId(), g);
+        }
+        Map<Long, Long> parents = coupons.categoryParents();
+        Set<Long> chosen = new HashSet<>();
+        for (CouponChoice ch : choices) {
+            if (ch == null || ch.memberCouponId() == null) {
+                continue;   // "쓰지 않음"
+            }
+            if (ch.sellerId() == null || !groups.containsKey(ch.sellerId())) {
+                throw ApiException.bad("장바구니에 없는 가게에 쿠폰을 골랐습니다.");
+            }
+            if (result.containsKey(ch.sellerId())) {
+                throw ApiException.bad("가게마다 쿠폰은 한 장만 쓸 수 있습니다.");
+            }
+            if (!chosen.add(ch.memberCouponId())) {
+                throw ApiException.bad("같은 쿠폰을 두 가게에 쓸 수 없습니다.");
+            }
+            MemberCoupon held = coupons.held(memberId, ch.memberCouponId());
+            if (held == null) {
+                throw ApiException.bad("가지고 있지 않은 쿠폰입니다.");
+            }
+            CouponService.Basket b = basket(groups.get(ch.sellerId()), bySeller.get(ch.sellerId()), parents);
+            String reason = coupons.unusableReason(held, b);
+            if (reason != null) {
+                throw ApiException.bad("'" + held.coupon().name() + "' 쿠폰: " + reason);
+            }
+            result.put(ch.sellerId(), new Applied(held, coupons.quote(held.coupon(), b)));
+        }
+        return result;
+    }
+
     // ---- 주문 생성 ----
 
+    /** 쿠폰 없이 주문한다(시범 데이터와 기존 호출용). */
     @Transactional
     public long createOrder(Member user, String receiverIn, String phoneIn, String addressIn, String cashReceiptNoIn) {
+        return createOrder(user, receiverIn, phoneIn, addressIn, cashReceiptNoIn, null);
+    }
+
+    @Transactional
+    public long createOrder(Member user, String receiverIn, String phoneIn, String addressIn, String cashReceiptNoIn,
+                            List<CouponChoice> couponChoices) {
         List<CartLine> lines = cartLines(user.id());
         if (lines.isEmpty()) {
             throw ApiException.bad("장바구니가 비어 있습니다.");
@@ -179,6 +276,12 @@ public class OrderService {
         if (receiver.isEmpty() || phone.isEmpty() || (needsAddress && address.isEmpty())) {
             throw ApiException.bad("받는 분, 연락처, 주소를 입력해 주세요.");
         }
+        Map<Long, List<CartLine>> bySeller = bySeller(lines);
+        Map<Long, Applied> applied = applyCoupons(user.id(), couponChoices, sum, bySeller);
+        long totalDiscount = 0;
+        for (Applied a : applied.values()) {
+            totalDiscount += a.discount();
+        }
 
         // 재고가 충분할 때만 차감한다. 동시에 주문이 들어와도 초과 판매되지 않는다.
         for (CartLine l : lines) {
@@ -194,31 +297,44 @@ public class OrderService {
                 INSERT INTO shop_order (tenant_id, order_no, buyer_id, total, receiver, phone, address, cash_receipt_no, created_at)
                 VALUES (:t, :no, :b, :total, :r, :p, :a, :c, :now)
                 """)
-                .param("t", tenant.id()).param("no", newOrderNo()).param("b", user.id()).param("total", sum.total())
+                .param("t", tenant.id()).param("no", newOrderNo()).param("b", user.id()).param("total", sum.total() - totalDiscount)
                 .param("r", receiver).param("p", phone).param("a", address)
                 .param("c", Text.clean(cashReceiptNoIn, 30)).param("now", now));
 
-        Map<Long, List<CartLine>> bySeller = new LinkedHashMap<>();
-        for (CartLine l : lines) {
-            bySeller.computeIfAbsent(l.sellerId(), k -> new ArrayList<>()).add(l);
-        }
         for (CartSummary.Group g : sum.groups()) {
+            Applied a = applied.get(g.sellerId());
+            long itemDiscount = a == null ? 0 : a.quote().itemDiscount();
+            long shipDiscount = a == null ? 0 : a.quote().shipDiscount();
             long subId = Db.insert(db.sql("""
-                    INSERT INTO sub_order (tenant_id, order_id, seller_id, items_total, ship_fee, total, has_physical, deposit_due_at)
-                    VALUES (:t, :o, :s, :items, :fee, :total, :phys, :due)
+                    INSERT INTO sub_order (tenant_id, order_id, seller_id, items_total, ship_fee, total, has_physical, deposit_due_at,
+                                           item_discount, ship_discount, member_coupon_id, coupon_issuer, coupon_name)
+                    VALUES (:t, :o, :s, :items, :fee, :total, :phys, :due, :itemDisc, :shipDisc, :mc, :issuer, :cname)
                     """)
                     .param("t", tenant.id()).param("o", orderId).param("s", g.sellerId())
-                    .param("items", g.itemsTotal()).param("fee", g.shipFee()).param("total", g.total())
-                    .param("phys", g.hasPhysical()).param("due", now.plusDays(DEPOSIT_DAYS)));
-            for (CartLine l : bySeller.get(g.sellerId())) {
+                    .param("items", g.itemsTotal()).param("fee", g.shipFee())
+                    .param("total", g.total() - itemDiscount - shipDiscount)
+                    .param("phys", g.hasPhysical()).param("due", now.plusDays(DEPOSIT_DAYS))
+                    .param("itemDisc", itemDiscount).param("shipDisc", shipDiscount)
+                    .param("mc", a == null ? null : a.held().id())
+                    .param("issuer", a == null ? null : a.held().coupon().issuer())
+                    .param("cname", a == null ? null : a.held().coupon().name()));
+            List<CartLine> sellerLines = bySeller.get(g.sellerId());
+            for (int i = 0; i < sellerLines.size(); i++) {
+                CartLine l = sellerLines.get(i);
                 // 상품명·가격·수수료율은 주문 시점 값으로 복사해 둔다. 나중에 바뀌어도 이 주문은 그대로다.
                 db.sql("""
-                        INSERT INTO order_item (sub_order_id, product_id, name, product_type, unit_price, qty, commission_rate_bp)
-                        VALUES (:s, :p, :n, :type, :price, :q, :rate)
+                        INSERT INTO order_item (sub_order_id, product_id, name, product_type, unit_price, qty, commission_rate_bp,
+                                                coupon_discount)
+                        VALUES (:s, :p, :n, :type, :price, :q, :rate, :disc)
                         """)
                         .param("s", subId).param("p", l.id()).param("n", l.name()).param("type", l.productType())
                         .param("price", l.currentPrice()).param("q", l.qty()).param("rate", commissionRateBp(l))
+                        .param("disc", a == null ? 0L : a.quote().perLine().get(i))
                         .update();
+            }
+            if (a != null) {
+                // 같은 트랜잭션 안에서 쓴 것으로 바꾼다. 실패하면 주문 전체가 되돌아간다.
+                coupons.markUsed(a.held().id(), user.id(), subId);
             }
         }
         db.sql("DELETE FROM cart_item WHERE member_id = :m").param("m", user.id()).update();
@@ -306,6 +422,7 @@ public class OrderService {
                 """).param("now", clock.now()).param("id", subId).param("b", buyerId).update(),
                 "입금 신고 후에는 판매자에게 취소를 요청해 주세요.");
         restoreStock(subId);
+        coupons.restore(subId);
         Party p = party(subId);
         notifications.notify(p.sellerMemberId(), "주문이 취소되었습니다", "주문 " + p.orderNo() + "을 구매자가 취소했습니다.", "/seller/orders");
     }
@@ -369,6 +486,7 @@ public class OrderService {
                 """).param("now", clock.now()).param("id", subId).param("s", sellerId).update();
         if (beforeShipping == 1) {
             restoreStock(subId);
+            coupons.restore(subId);
             notifyRefund(subId);
             return;
         }
@@ -376,6 +494,7 @@ public class OrderService {
                 UPDATE sub_order SET status = 'refunded', closed_at = :now, close_reason = '판매자 환불'
                  WHERE id = :id AND seller_id = :s AND status IN ('shipped', 'delivered')
                 """).param("now", clock.now()).param("id", subId).param("s", sellerId).update(), NOT_ALLOWED);
+        coupons.restore(subId);
         notifyRefund(subId);
     }
 
@@ -412,6 +531,7 @@ public class OrderService {
                     """).param("now", now).param("id", id).update();
             if (changed == 1) {
                 restoreStock(id);
+                coupons.restore(id);
                 cancelled++;
                 Party p = party(id);
                 notifications.notifyWithMail(p.buyerId(), "입금 기한이 지나 주문이 취소되었습니다",
@@ -444,6 +564,7 @@ public class OrderService {
                    so.deposit_due_at, so.depositor_name, so.deposit_reported_at, so.deposit_confirmed_at,
                    so.cash_receipt_approval, so.carrier, so.tracking_no, so.shipped_at, so.delivered_at,
                    so.completed_at, so.closed_at, so.close_reason,
+                   so.item_discount, so.ship_discount, so.coupon_name, so.coupon_issuer,
                    s.shop_name, s.biz_no, s.bank_name, s.bank_account, s.bank_holder, s.pay_link,
                    s.member_id AS seller_member_id
               FROM sub_order so JOIN seller s ON s.id = so.seller_id
@@ -487,7 +608,7 @@ public class OrderService {
 
     OrderDetail.Sub toSub(OrderDetail.SubRow s) {
         List<OrderDetail.Item> items = db.sql("""
-                SELECT id, sub_order_id, product_id, name, product_type, unit_price, qty, commission_rate_bp
+                SELECT id, sub_order_id, product_id, name, product_type, unit_price, qty, commission_rate_bp, coupon_discount
                   FROM order_item WHERE sub_order_id = :s ORDER BY id
                 """).param("s", s.id()).query(OrderDetail.Item.class).list();
         return new OrderDetail.Sub(s, items, tracking.track(s.carrier(), s.trackingNo(), s.shippedAt()));

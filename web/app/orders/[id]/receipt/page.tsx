@@ -3,6 +3,7 @@
 import { useParams, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import { NeedLogin } from '@/components/Bits';
+import { CouponRow } from '@/components/CouponTicket';
 import { api } from '@/lib/api';
 import { STATUS_LABEL, when, won } from '@/lib/format';
 import type { OrderDetail, Sub } from '@/lib/types';
@@ -23,6 +24,7 @@ function SubTable({ s }: { s: Sub }) {
             <tr key={i.id}><td>{i.name}</td><td className="num">{won(i.unitPrice)}</td><td className="num">{i.qty}</td><td className="num">{won(i.unitPrice * i.qty)}</td></tr>
           ))}
           <tr><td colSpan={3}>배송비</td><td className="num">{won(s.sub.shipFee)}</td></tr>
+          <CouponRow sub={s.sub} colSpan={3} />
           <tr><td colSpan={3}><strong>합계</strong></td><td className="num"><strong>{won(s.sub.total)}</strong></td></tr>
         </tbody>
       </table>

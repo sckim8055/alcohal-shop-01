@@ -26,7 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class OrderController {
 
-    public record CreateRequest(String receiver, String phone, String address, String cashReceiptNo) {
+    public record CreateRequest(String receiver, String phone, String address, String cashReceiptNo,
+                                List<OrderService.CouponChoice> coupons) {
     }
 
     public record DepositRequest(String depositor) {
@@ -54,7 +55,7 @@ public class OrderController {
     @PostMapping("/api/orders")
     public OrderDetail create(@RequestBody CreateRequest body, HttpServletRequest request) {
         Member user = auth.requireUser(request);
-        long id = orders.createOrder(user, body.receiver(), body.phone(), body.address(), body.cashReceiptNo());
+        long id = orders.createOrder(user, body.receiver(), body.phone(), body.address(), body.cashReceiptNo(), body.coupons());
         return orders.find(id);
     }
 

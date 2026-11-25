@@ -46,14 +46,46 @@ export type SubRow = {
   depositConfirmedAt: string | null; cashReceiptApproval: string | null; carrier: string | null; trackingNo: string | null;
   shippedAt: string | null; deliveredAt: string | null; completedAt: string | null; closedAt: string | null; closeReason: string | null;
   shopName: string; bizNo: string; bankName: string; bankAccount: string; bankHolder: string; payLink: string; sellerMemberId: number;
+  /** 쿠폰 할인. 서버가 아직 보내지 않는 경우에 대비해 없을 수도 있다고 본다(?? 0 으로 읽는다). */
+  itemDiscount?: number; shipDiscount?: number; couponName?: string | null; couponIssuer?: CouponIssuer | null;
 };
-export type Item = { id: number; productId: number; name: string; productType: string; unitPrice: number; qty: number; commissionRateBp: number };
+export type Item = { id: number; productId: number; name: string; productType: string; unitPrice: number; qty: number; commissionRateBp: number; couponDiscount?: number };
 export type Tracking = { provider: string; carrierName: string; link: string | null; steps: { label: string; at: string }[]; delivered: boolean };
 export type Sub = { sub: SubRow; items: Item[]; tracking: Tracking | null };
 export type OrderDetail = { order: Order; subs: Sub[] };
 export type SellerOrder = { order: Order; sub: Sub };
 
-export type Invoice = { id: number; sellerId: number; shopName: string; periodYm: string; salesTotal: number; amount: number; status: 'issued' | 'paid'; issuedAt: string; paidAt: string | null };
+export type Invoice = { id: number; sellerId: number; shopName: string; periodYm: string; salesTotal: number; amount: number; status: 'issued' | 'paid'; issuedAt: string; paidAt: string | null;
+  /** 플랫폼 쿠폰으로 깎아 준 금액(수수료에서 뺀다)과 실제로 낼 금액. net 이 음수면 플랫폼이 판매자에게 보낸다. */
+  platformCouponCredit?: number; net?: number;
+};
 export type Carrier = { code: string; name: string };
 export type PostSummary = { id: number; title: string; authorName: string; createdAt: string };
 export type Post = PostSummary & { body: string };
+
+// ---- 쿠폰 (docs/adr/0001-coupons.md) ----
+export type CouponIssuer = 'platform' | 'seller';
+export type DiscountType = 'amount' | 'percent' | 'free_shipping';
+export type IssueType = 'signup' | 'download' | 'code' | 'grant';
+export type CouponStatus = 'active' | 'paused' | 'ended';
+export type Coupon = {
+  id: number; issuer: CouponIssuer; sellerId: number | null; shopName: string | null; name: string;
+  discountType: DiscountType; discountValue: number; maxDiscount: number | null; minOrder: number;
+  categoryId: number | null; categoryName: string | null; excludeAlcohol: boolean;
+  /** 만든 사람(판매자·운영자)에게만 보인다. 구매자 응답에서는 항상 null */
+  issueType: IssueType; code: string | null;
+  totalLimit: number | null; issuedCount: number; validFrom: string; validTo: string; validDays: number | null;
+  status: CouponStatus; createdAt: string;
+};
+export type MemberCoupon = { id: number; coupon: Coupon; status: 'issued' | 'used'; issuedAt: string; expiresAt: string; usedAt: string | null; expired: boolean };
+/** GET /coupons 한 줄 */
+export type CouponOffer = { coupon: Coupon; owned: boolean; soldOut: boolean };
+/** GET /checkout/coupons: 가게별로 지금 쓸 수 있는 내 쿠폰과 할인액 */
+export type CheckoutCouponOption = { memberCouponId: number; name: string; issuer: CouponIssuer; discountType: DiscountType; discount: number; shipDiscount: number };
+export type CheckoutCouponGroup = { sellerId: number; shopName: string; options: CheckoutCouponOption[] };
+/** POST /seller/coupons, POST /admin/coupons 본문. excludeAlcohol 은 운영자만 보낸다. */
+export type CouponInput = {
+  name: string; discountType: DiscountType; discountValue: number; maxDiscount: number | null; minOrder: number;
+  categoryId: number | null; issueType: IssueType; code: string | null; totalLimit: number | null;
+  validFrom: string; validTo: string; validDays: number | null; excludeAlcohol?: boolean;
+};

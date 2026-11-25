@@ -17,18 +17,22 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * 월 수수료 청구서. 그 달(한국 시간)에 입금 확인된 주문 중 취소·환불되지 않은 것만 계산한다.
  * 수수료는 상품 금액에만 붙고 배송비에는 붙지 않는다.
+ * 판매자 쿠폰 할인은 판매자가 덜 받은 돈이라 수수료 기준에서 빼고, 플랫폼 쿠폰 할인은 빼지 않는 대신
+ * 플랫폼이 부담할 금액(platformCouponCredit)으로 청구액에서 차감한다.
  */
 @Service
 public class InvoiceService {
 
+    /** net = amount − platformCouponCredit. 음수면 플랫폼이 판매자에게 그만큼 보낸다. */
     public record Invoice(long id, long sellerId, String shopName, String periodYm, long salesTotal, long amount,
-                          String status, LocalDateTime issuedAt, LocalDateTime paidAt) {
+                          String status, LocalDateTime issuedAt, LocalDateTime paidAt, long platformCouponCredit,
+                          long net) {
     }
 
-    public record Amounts(long sales, long amount) {
+    public record Amounts(long sales, long amount, long platformCouponCredit) {
     }
 
-    private record Line(long unitPrice, int qty, int commissionRateBp) {
+    private record Line(long unitPrice, int qty, int commissionRateBp, long couponDiscount, String couponIssuer) {
     }
 
     private record Existing(long id, String status) {
@@ -36,7 +40,8 @@ public class InvoiceService {
 
     private static final String INVOICE_SELECT = """
             SELECT ci.id, ci.seller_id, s.shop_name, ci.period_ym, ci.sales_total, ci.amount, ci.status,
-                   ci.issued_at, ci.paid_at
+                   ci.issued_at, ci.paid_at, ci.platform_coupon_credit,
+                   ci.amount - ci.platform_coupon_credit AS net
               FROM commission_invoice ci JOIN seller s ON s.id = ci.seller_id
             """;
 
@@ -66,21 +71,27 @@ public class InvoiceService {
                 .withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
         LocalDateTime to = period.plusMonths(1).atDay(1).atStartOfDay(AppClock.KST)
                 .withZoneSameInstant(ZoneOffset.UTC).toLocalDateTime();
-        List<Line> lines = db.sql("""
-                SELECT oi.unit_price, oi.qty, oi.commission_rate_bp
-                  FROM order_item oi JOIN sub_order so ON so.id = oi.sub_order_id
+        String billable = """
                  WHERE so.seller_id = :s
                    AND so.status IN ('paid', 'shipped', 'delivered', 'completed')
                    AND so.deposit_confirmed_at >= :from AND so.deposit_confirmed_at < :to
-                """).param("s", sellerId).param("from", from).param("to", to).query(Line.class).list();
+                """;
+        List<Line> lines = db.sql("""
+                SELECT oi.unit_price, oi.qty, oi.commission_rate_bp, oi.coupon_discount, so.coupon_issuer
+                  FROM order_item oi JOIN sub_order so ON so.id = oi.sub_order_id
+                """ + billable).param("s", sellerId).param("from", from).param("to", to).query(Line.class).list();
         long sales = 0;
         long amount = 0;
         for (Line l : lines) {
             long line = l.unitPrice() * l.qty();
             sales += line;
-            amount += (line * l.commissionRateBp() + 5_000) / 10_000;   // 줄 단위로 원 미만 반올림
+            long base = "seller".equals(l.couponIssuer()) ? line - l.couponDiscount() : line;
+            amount += (base * l.commissionRateBp() + 5_000) / 10_000;   // 줄 단위로 원 미만 반올림
         }
-        return new Amounts(sales, amount);
+        long credit = db.sql("SELECT COALESCE(SUM(so.item_discount + so.ship_discount), 0) FROM sub_order so"
+                        + billable + " AND so.coupon_issuer = 'platform'")
+                .param("s", sellerId).param("from", from).param("to", to).query(Long.class).single();
+        return new Amounts(sales, amount, credit);
     }
 
     /** 승인된 판매자 전체의 청구서를 만들거나 다시 계산한다. 납부 완료된 청구서는 건드리지 않는다. */
@@ -99,17 +110,23 @@ public class InvoiceService {
                 continue;
             }
             if (existing != null) {
-                db.sql("UPDATE commission_invoice SET sales_total = :sales, amount = :amount, issued_at = :now WHERE id = :id")
-                        .param("sales", a.sales()).param("amount", a.amount()).param("now", clock.now())
+                db.sql("""
+                        UPDATE commission_invoice SET sales_total = :sales, amount = :amount, platform_coupon_credit = :credit,
+                               issued_at = :now WHERE id = :id
+                        """)
+                        .param("sales", a.sales()).param("amount", a.amount()).param("credit", a.platformCouponCredit())
+                        .param("now", clock.now())
                         .param("id", existing.id()).update();
                 count++;
             } else if (a.sales() > 0) {
                 db.sql("""
-                        INSERT INTO commission_invoice (tenant_id, seller_id, period_ym, sales_total, amount, issued_at)
-                        VALUES (:t, :s, :p, :sales, :amount, :now)
+                        INSERT INTO commission_invoice (tenant_id, seller_id, period_ym, sales_total, amount,
+                                                        platform_coupon_credit, issued_at)
+                        VALUES (:t, :s, :p, :sales, :amount, :credit, :now)
                         """)
                         .param("t", tenant.id()).param("s", sellerId).param("p", ym)
-                        .param("sales", a.sales()).param("amount", a.amount()).param("now", clock.now()).update();
+                        .param("sales", a.sales()).param("amount", a.amount()).param("credit", a.platformCouponCredit())
+                        .param("now", clock.now()).update();
                 count++;
             }
         }

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import QRCode from 'qrcode';
 import { useCallback, useEffect, useState } from 'react';
 import { NeedLogin, Note, Stamp, useAction } from '@/components/Bits';
+import { CouponRow } from '@/components/CouponTicket';
 import { api } from '@/lib/api';
 import { when, won } from '@/lib/format';
 import type { OrderDetail, Sub } from '@/lib/types';
@@ -38,6 +39,7 @@ function SubCard({ orderId, s, reload }: { orderId: number; s: Sub; reload: () =
             <tr key={i.id}><td>{i.name} × {i.qty}</td><td className="num">{won(i.unitPrice * i.qty)}</td></tr>
           ))}
           <tr><td>배송비</td><td className="num">{sub.hasPhysical ? won(sub.shipFee) : '없음'}</td></tr>
+          <CouponRow sub={sub} />
           <tr><td><strong>이 가게에 보낼 금액</strong></td><td className="num"><strong>{won(sub.total)}</strong></td></tr>
         </tbody>
       </table>

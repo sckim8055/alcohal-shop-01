@@ -15,6 +15,7 @@ import me.nexthub.sool.common.Db;
 import me.nexthub.sool.common.Passwords;
 import me.nexthub.sool.common.Tenant;
 import me.nexthub.sool.common.Text;
+import me.nexthub.sool.coupon.CouponService;
 import me.nexthub.sool.notify.NotificationService;
 
 import org.springframework.http.HttpStatus;
@@ -63,9 +64,12 @@ public class AuthController {
     private final Tenant tenant;
     private final AppClock clock;
     private final NotificationService notifications;
+    private final CouponService coupons;
 
-    public AuthController(JdbcClient db, Auth auth, Tenant tenant, AppClock clock, NotificationService notifications) {
+    public AuthController(JdbcClient db, Auth auth, Tenant tenant, AppClock clock, NotificationService notifications,
+                          CouponService coupons) {
         this.notifications = notifications;
+        this.coupons = coupons;
         this.db = db;
         this.auth = auth;
         this.tenant = tenant;
@@ -103,6 +107,7 @@ public class AuthController {
                 """)
                 .param("t", tenant.id()).param("e", email).param("h", Passwords.hash(password))
                 .param("n", name).param("now", clock.now()));
+        coupons.issueSignup(id);   // 가입 축하 쿠폰과 알림
         return signIn(request, id);
     }
 

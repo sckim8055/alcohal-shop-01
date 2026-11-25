@@ -192,7 +192,10 @@ public class AdminController {
             if (i.periodYm().equals(body.period()) && "issued".equals(i.status())) {
                 long memberId = db.sql("SELECT member_id FROM seller WHERE id = :id").param("id", i.sellerId()).query(Long.class).single();
                 notifications.notifyWithMail(memberId, i.periodYm() + " 수수료 청구서가 나왔습니다",
-                        "입금 확인된 매출 " + String.format("%,d원", i.salesTotal()) + ", 수수료 " + String.format("%,d원", i.amount()), "/seller/invoices");
+                        "입금 확인된 매출 " + String.format("%,d원", i.salesTotal()) + ", 수수료 " + String.format("%,d원", i.amount())
+                                + (i.platformCouponCredit() > 0
+                                ? ", 플랫폼 쿠폰 차감 " + String.format("%,d원", i.platformCouponCredit())
+                                + ", 실제 낼 금액 " + String.format("%,d원", i.net()) : ""), "/seller/invoices");
             }
         }
         return Map.of("count", count);

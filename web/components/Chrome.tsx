@@ -30,6 +30,7 @@ export function Header() {
         <nav className="nav" aria-label="주 메뉴">
           <Link href="/" aria-current={cur('/')}>장 보기</Link>
           <Link href="/board" aria-current={cur('/board')}>이야기</Link>
+          <Link href="/coupons" aria-current={cur('/coupons')}>쿠폰</Link>
           {user && (
             <>
               <Link href="/cart" aria-current={cur('/cart')}>

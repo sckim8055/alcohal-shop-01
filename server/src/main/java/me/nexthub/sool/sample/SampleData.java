@@ -57,7 +57,7 @@ public class SampleData implements ApplicationRunner {
 
     /** 테스트 전용: 모든 업무 데이터를 지우고 설정을 처음 값으로 돌린다. */
     public void reset() {
-        for (String table : List.of("order_item", "sub_order", "shop_order", "cart_item", "commission_invoice",
+        for (String table : List.of("member_coupon", "coupon", "order_item", "sub_order", "shop_order", "cart_item", "commission_invoice",
                 "commission_rate_log", "post", "product_media", "product", "seller", "upload_file",
                 "notification", "message_outbox", "member")) {
             db.sql("DELETE FROM " + table).update();
@@ -146,6 +146,36 @@ public class SampleData implements ApplicationRunner {
         product(supplies, gauge, "당도계", "아직 쓰는 중인 임시저장 상품 예시입니다.", 23000, 0,
                 null, null, null, "physical", "draft");
         attributes();
+        coupons(supplies, cups, today);
+    }
+
+    /** 시범 쿠폰. 기존 시범 회원에게는 미리 주지 않는다(기존 테스트의 금액이 바뀌지 않게). */
+    private void coupons(long supplies, long cups, LocalDate today) {
+        coupon("platform", null, "가입 축하 3,000원", "amount", 3000, null, 20000, true, "signup", null, null,
+                today.minusDays(1), today.plusDays(365), 30);
+        coupon("platform", null, "첫 장보기 무료배송", "free_shipping", 0, null, 10000, false, "code", "SOOL-FREE", null,
+                today.minusDays(1), today.plusDays(90), null);
+        coupon("seller", supplies, "누룩과 쌀 10% 할인", "percent", 10, 5000L, 15000, true, "download", null, 100,
+                today.minusDays(1), today.plusDays(60), null);
+        coupon("seller", cups, "도담 공방 2,000원", "amount", 2000, null, 30000, true, "download", null, null,
+                today.minusDays(1), today.plusDays(60), null);
+    }
+
+    private void coupon(String issuer, Long sellerId, String name, String type, int value, Long maxDiscount,
+                        long minOrder, boolean excludeAlcohol, String issueType, String code, Integer totalLimit,
+                        LocalDate from, LocalDate to, Integer validDays) {
+        db.sql("""
+                INSERT INTO coupon (tenant_id, issuer, seller_id, name, discount_type, discount_value, max_discount,
+                                    min_order, exclude_alcohol, issue_type, code, total_limit, valid_from, valid_to,
+                                    valid_days, status, created_at)
+                VALUES (:t, :issuer, :seller, :name, :type, :value, :max, :min, :ex, :issueType, :code, :limit,
+                        :from, :to, :days, 'active', :now)
+                """)
+                .param("t", tenant.id()).param("issuer", issuer).param("seller", sellerId).param("name", name)
+                .param("type", type).param("value", value).param("max", maxDiscount).param("min", minOrder)
+                .param("ex", excludeAlcohol).param("issueType", issueType).param("code", code)
+                .param("limit", totalLimit).param("from", from).param("to", to).param("days", validDays)
+                .param("now", clock.now()).update();
     }
 
     /** 주류 속성(도수, 용량, 원재료 산지)과 꾸민 설명 예시 */

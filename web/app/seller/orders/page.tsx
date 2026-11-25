@@ -6,7 +6,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { Note, Stamp, useAction } from '@/components/Bits';
 import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
-import { when, won } from '@/lib/format';
+import { couponOff, when, won } from '@/lib/format';
 import type { Carrier, Paged, SellerOrder } from '@/lib/types';
 
 function Row({ o, carriers, reload }: { o: SellerOrder; carriers: Carrier[]; reload: () => void }) {
@@ -29,7 +29,11 @@ function Row({ o, carriers, reload }: { o: SellerOrder; carriers: Carrier[]; rel
       <p>
         {when(o.order.createdAt)} 주문, {o.sub.items.map((i) => i.name + ' × ' + i.qty).join(', ')}<br />
         받는 분 {o.order.receiver} ({o.order.phone}){o.order.address && <>, {o.order.address}</>}<br />
-        받을 금액 <strong>{won(sub.total)}</strong> (상품 {won(sub.itemsTotal)} + 배송비 {won(sub.shipFee)})
+        받을 금액 <strong>{won(sub.total)}</strong> (상품 {won(sub.itemsTotal)} + 배송비 {won(sub.shipFee)}{couponOff(sub) > 0 && <> - 쿠폰 할인 {won(couponOff(sub))}</>})
+        {couponOff(sub) > 0 && (
+          <><br />쿠폰 할인 ({sub.couponName ?? '쿠폰'}) <strong>-{won(couponOff(sub))}</strong>{' '}
+            <span className="muted small">{sub.couponIssuer === 'platform' ? '이 금액은 수수료 청구서에서 빼 드립니다.' : sub.couponIssuer === 'seller' ? '내 가게 쿠폰으로 깎아 준 금액입니다.' : ''}</span></>
+        )}
         {o.order.cashReceiptNo && <><br />현금영수증 요청 번호 {o.order.cashReceiptNo}</>}
       </p>
 
