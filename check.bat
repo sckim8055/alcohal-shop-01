@@ -7,4 +7,6 @@ call gradle -v
 echo ==== node / npm ====
 node -v
 call npm -v
+echo ==== ffmpeg (optional, for video compression) ====
+where ffmpeg >nul 2>nul && (ffmpeg -version | findstr /b "ffmpeg version") || echo not installed
 pause

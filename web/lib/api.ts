@@ -53,7 +53,15 @@ export async function api<T = unknown>(path: string, opts: { method?: 'GET' | 'P
 }
 
 /** 사진·동영상 파일 올리기 */
-export async function uploadFile(file: File): Promise<{ url: string; kind: 'image' | 'video' }> {
+export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+
+export async function uploadFile(file: File): Promise<{ url: string; kind: 'image' | 'video'; compressing: boolean }> {
+  // 큰 파일은 보내기 전에 막는다(서버도 같은 기준으로 다시 확인한다).
+  const video = file.type.startsWith('video/');
+  if (file.size > (video ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES)) {
+    throw new ApiError(400, `'${file.name}' 파일이 너무 큽니다. ${video ? '동영상은 100MB' : '사진은 5MB'} 이하만 올릴 수 있습니다.`);
+  }
   const form = new FormData();
   form.append('file', file);
   let res: Response;

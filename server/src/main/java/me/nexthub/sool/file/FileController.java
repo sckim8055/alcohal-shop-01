@@ -36,7 +36,8 @@ public class FileController {
     private static final long MAX_VIDEO = 100L * 1024 * 1024;
     private static final SecureRandom RANDOM = new SecureRandom();
 
-    public record Uploaded(String url, String kind, String contentType, long size) {
+    /** compressing: 동영상을 뒤에서 줄이는 중이면 true (몇 분 뒤 용량이 줄어든다) */
+    public record Uploaded(String url, String kind, String contentType, long size, boolean compressing) {
     }
 
     private record Type(String ext, String contentType, String kind) {
@@ -47,13 +48,15 @@ public class FileController {
     private final Tenant tenant;
     private final AppClock clock;
     private final Path dir;
+    private final VideoCompressor compressor;
 
-    public FileController(JdbcClient db, Auth auth, Tenant tenant, AppClock clock,
+    public FileController(JdbcClient db, Auth auth, Tenant tenant, AppClock clock, VideoCompressor compressor,
                           @Value("${sool.upload-dir:./data/uploads}") String dir) throws IOException {
         this.db = db;
         this.auth = auth;
         this.tenant = tenant;
         this.clock = clock;
+        this.compressor = compressor;
         this.dir = Path.of(dir).toAbsolutePath().normalize();
         Files.createDirectories(this.dir);
     }
@@ -88,7 +91,8 @@ public class FileController {
                 """)
                 .param("t", tenant.id()).param("m", user.id()).param("n", name).param("k", type.kind())
                 .param("c", type.contentType()).param("s", file.getSize()).param("now", clock.now()).update();
-        return new Uploaded(URL_PREFIX + name, type.kind(), type.contentType(), file.getSize());
+        boolean compressing = "video".equals(type.kind()) && compressor.submit(dir.resolve(name), name);
+        return new Uploaded(URL_PREFIX + name, type.kind(), type.contentType(), file.getSize(), compressing);
     }
 
     /** 이 회원이 올린 파일이면 종류(image, video)를, 아니면 null 을 돌려준다. */

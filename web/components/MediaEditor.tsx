@@ -18,6 +18,7 @@ export function MediaEditor({ value, onChange }: { value: Media[]; onChange: (m:
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [yt, setYt] = useState('');
+  const [compressing, setCompressing] = useState(false);
   const firstImage = value.findIndex((m) => m.kind === 'image');
 
   async function pick(e: React.ChangeEvent<HTMLInputElement>) {
@@ -31,6 +32,7 @@ export function MediaEditor({ value, onChange }: { value: Media[]; onChange: (m:
       for (const f of files) {
         const up = await uploadFile(f);
         added.push({ kind: up.kind, url: up.url });
+        if (up.compressing) setCompressing(true);
       }
     } catch (err) {
       setError(err instanceof ApiError ? err.message : '파일을 올리지 못했습니다.');
@@ -62,6 +64,7 @@ export function MediaEditor({ value, onChange }: { value: Media[]; onChange: (m:
   return (
     <div>
       {error && <div className="note error">{error}</div>}
+      {compressing && <div className="note">올린 동영상은 서버에서 자동으로 용량을 줄입니다. 길이에 따라 몇 분 걸리며, 그동안에는 원본이 보입니다. 상품은 지금 저장해도 됩니다.</div>}
       {value.length > 0 && (
         <ul className="media-list">
           {value.map((m, i) => (

@@ -40,6 +40,8 @@ class ManageTest {
     AppClock clock;
     @Autowired
     JdbcClient db;
+    @Autowired
+    me.nexthub.sool.file.VideoCompressor compressor;
 
     MockMvc mvc;
 
@@ -318,6 +320,35 @@ class ManageTest {
 
         p.put("media", List.of());
         assertEquals(0, seller.put("/api/seller/products/" + id, p).body().get("media").size());
+    }
+
+    @Test
+    @DisplayName("올린 동영상은 뒤에서 줄여 원본보다 작아진다 (ffmpeg 이 있을 때만 확인)")
+    void videoCompression() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(compressor.available(), "ffmpeg 이 없어 건너뜀");
+        java.nio.file.Path src = java.nio.file.Files.createTempFile("sool-test", ".mp4");
+        // 일부러 용량이 큰 3초짜리 시험 영상을 만든다.
+        Process make = new ProcessBuilder("ffmpeg", "-y", "-f", "lavfi", "-i", "testsrc=duration=3:size=1920x1080:rate=30",
+                "-c:v", "libx264", "-crf", "1", "-pix_fmt", "yuv420p", src.toString())
+                .redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start();
+        assertEquals(0, make.waitFor());
+        byte[] bytes = java.nio.file.Files.readAllBytes(src);
+
+        Api seller = as("supplies@test.local");
+        JsonNode up = seller.upload("clip.mp4", bytes).body();
+        assertEquals("video", up.get("kind").asString());
+        assertTrue(up.get("compressing").asBoolean());
+        String name = up.get("url").asString().substring("/api/files/".length());
+
+        String status = "pending";
+        for (int i = 0; i < 120 && "pending".equals(status); i++) {
+            Thread.sleep(500);
+            status = db.sql("SELECT compress_status FROM upload_file WHERE stored_name = :n").param("n", name).query(String.class).single();
+        }
+        assertEquals("done", status);
+        long size = db.sql("SELECT size_bytes FROM upload_file WHERE stored_name = :n").param("n", name).query(Long.class).single();
+        assertTrue(size < bytes.length, "줄인 뒤 " + size + " < 원본 " + bytes.length);
+        assertFalse(seller.upload("photo.png", PNG).body().get("compressing").asBoolean());   // 사진은 대상이 아니다
     }
 
     @Test

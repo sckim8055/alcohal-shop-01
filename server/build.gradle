@@ -36,8 +36,16 @@ tasks.withType(JavaCompile).configureEach {
     options.compilerArgs << '-parameters'
 }
 
+// 한글이 깨지지 않도록 실행·테스트 출력을 UTF-8 로 맞춘다.
+def utf8 = ['-Dfile.encoding=UTF-8', '-Dstdout.encoding=UTF-8', '-Dstderr.encoding=UTF-8']
+
+tasks.named('bootRun') {
+    jvmArgs utf8
+}
+
 tasks.named('test') {
     useJUnitPlatform()
+    jvmArgs utf8
     testLogging {
         events 'passed', 'failed', 'skipped'
         exceptionFormat 'full'
