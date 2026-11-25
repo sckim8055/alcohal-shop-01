@@ -3,6 +3,8 @@ package me.nexthub.sool.order;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import me.nexthub.sool.claim.Claim;
+
 /** 주문 한 건과 그 안의 판매자별 주문들. 영수증도 이 자료로 그린다. */
 public record OrderDetail(Order order, List<Sub> subs) {
 
@@ -26,6 +28,7 @@ public record OrderDetail(Order order, List<Sub> subs) {
                        long unitPrice, int qty, int commissionRateBp, long couponDiscount) {
     }
 
-    public record Sub(SubRow sub, List<Item> items, TrackingService.Tracking tracking) {
+    /** claim: 이 판매자별 주문의 가장 최근 취소·반품·교환 신청(없으면 null) */
+    public record Sub(SubRow sub, List<Item> items, TrackingService.Tracking tracking, Claim claim) {
     }
 }

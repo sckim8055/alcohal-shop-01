@@ -8,6 +8,8 @@ export type Seller = {
   licenseType: string; licenseNo: string; licenseVerified: boolean;
   baseShipFee: number; freeShipMin: number | null; freeShipStart: string | null; freeShipEnd: string | null;
   commissionRateBp: number | null;
+  /** 전자상거래법상 판매자 정보(docs/adr/0002 F). 서버가 아직 보내지 않을 수 있어 없을 수도 있다고 본다. */
+  ceoName?: string; bizAddress?: string; mailOrderNo?: string; returnAddress?: string; csPhone?: string;
 };
 
 export type Me = { user: Member | null; seller: Seller | null; csrfToken: string; cartCount: number; unreadCount: number };
@@ -27,7 +29,9 @@ export type Product = {
 
 export type ProductStatus = 'draft' | 'on_sale' | 'paused' | 'ended' | 'blocked';
 export type Media = { kind: 'image' | 'video' | 'youtube'; url: string };
-export type ProductDetail = { product: Product; descriptionDoc: string | null; media: Media[] };
+/** 상품 상세 아래 "판매자 정보" 표. 계좌 정보는 들어 있지 않다. */
+export type SellerInfo = { shopName: string; ceoName: string; bizNo: string; bizAddress: string; mailOrderNo: string; csPhone: string; returnAddress: string };
+export type ProductDetail = { product: Product; descriptionDoc: string | null; media: Media[]; sellerInfo?: SellerInfo | null };
 export type Notification = { id: number; title: string; body: string; link: string; readAt: string | null; createdAt: string };
 
 export type CartLine = {
@@ -51,7 +55,8 @@ export type SubRow = {
 };
 export type Item = { id: number; productId: number; name: string; productType: string; unitPrice: number; qty: number; commissionRateBp: number; couponDiscount?: number };
 export type Tracking = { provider: string; carrierName: string; link: string | null; steps: { label: string; at: string }[]; delivered: boolean };
-export type Sub = { sub: SubRow; items: Item[]; tracking: Tracking | null };
+/** claim: 이 판매자별 주문의 가장 최근 취소·반품·교환 신청(없으면 null). 서버가 아직 보내지 않으면 undefined. */
+export type Sub = { sub: SubRow; items: Item[]; tracking: Tracking | null; claim?: Claim | null };
 export type OrderDetail = { order: Order; subs: Sub[] };
 export type SellerOrder = { order: Order; sub: Sub };
 
@@ -89,3 +94,26 @@ export type CouponInput = {
   categoryId: number | null; issueType: IssueType; code: string | null; totalLimit: number | null;
   validFrom: string; validTo: string; validDays: number | null; excludeAlcohol?: boolean;
 };
+
+// ---- 취소·반품·교환, 찜, 배송지 (docs/adr/0002-claims-wishlist-address.md) ----
+export type ClaimType = 'cancel' | 'return' | 'exchange';
+export type ClaimStatus = 'requested' | 'approved' | 'rejected' | 'done' | 'withdrawn';
+export type ReasonCode = 'changed_mind' | 'defect' | 'wrong_item' | 'late' | 'other';
+export type Claim = {
+  /** 승인된 반품·교환일 때만: 물건을 돌려보낼 곳 */
+  returnAddress?: string | null;
+  id: number; subOrderId: number; orderId: number; orderNo: string; shopName: string; buyerName: string;
+  claimType: ClaimType; reasonCode: ReasonCode; reasonText: string;
+  status: ClaimStatus; sellerNote: string | null; carrier: string | null; trackingNo: string | null;
+  /** "상품A × 2, 상품B × 1" 한 줄 요약 */
+  items: string;
+  /** 판매자별 주문 합계 */
+  total: number;
+  requestedAt: string; answeredAt: string | null; doneAt: string | null;
+};
+export type Address = { id: number; label: string; receiver: string; phone: string; address: string; isDefault: boolean };
+/** POST·PUT /my/addresses 본문 */
+export type AddressInput = Omit<Address, 'id'>;
+export type ReorderResult = { added: number; skipped: string[] };
+/** GET /seller 의 todo: 가게에서 지금 처리할 일 */
+export type SellerTodo = { claimsRequested: number; returnsApproved: number; soldOut: number; shipLate: number };

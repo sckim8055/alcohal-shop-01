@@ -14,7 +14,7 @@ function Inner({ children }: { children: React.ReactNode }) {
       { title: '현황', items: [{ href: '/admin', label: '오늘의 장터' }] },
       { title: '사람', items: [{ href: '/admin/members', label: '회원' }, { href: '/admin/sellers', label: '판매자·입점 심사' }] },
       { title: '상품', items: [{ href: '/admin/products', label: '상품' }, { href: '/admin/categories', label: '분류' }] },
-      { title: '주문과 정산', items: [{ href: '/admin/orders', label: '주문' }, { href: '/admin/commission', label: '수수료율' }, { href: '/admin/invoices', label: '수수료 청구' }, { href: '/admin/coupons', label: '쿠폰' }] },
+      { title: '주문과 정산', items: [{ href: '/admin/orders', label: '주문' }, { href: '/admin/claims', label: '취소·반품·교환' }, { href: '/admin/commission', label: '수수료율' }, { href: '/admin/invoices', label: '수수료 청구' }, { href: '/admin/coupons', label: '쿠폰' }] },
     ]}>
       {children}
     </WithSideMenu>

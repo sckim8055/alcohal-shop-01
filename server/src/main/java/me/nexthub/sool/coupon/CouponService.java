@@ -379,6 +379,10 @@ public class CouponService {
         if (minOrder < 0) {
             throw ApiException.bad("최소 주문 금액은 0원 이상으로 입력해 주세요.");
         }
+        // 금액 할인이 주문 금액보다 크면 0원 주문이 생긴다. 최소 주문 금액으로 막는다.
+        if ("amount".equals(type) && minOrder < value) {
+            throw ApiException.bad("최소 주문 금액은 할인 금액 이상이어야 합니다.");
+        }
         if (r.categoryId() != null) {
             int found = db.sql("SELECT COUNT(*) FROM category WHERE id = :id AND tenant_id = :t")
                     .param("id", r.categoryId()).param("t", tenant.id()).query(Integer.class).single();

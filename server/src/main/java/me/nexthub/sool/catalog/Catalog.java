@@ -109,6 +109,10 @@ public class Catalog {
                 .query(String.class).optional().orElse(null);
         List<ProductDetail.Media> media = db.sql("SELECT kind, url FROM product_media WHERE product_id = :id ORDER BY sort_order")
                 .param("id", p.id()).query(ProductDetail.Media.class).list();
-        return new ProductDetail(p, doc, media);
+        ProductDetail.SellerInfo info = db.sql("""
+                SELECT shop_name, ceo_name, biz_no, biz_address, mail_order_no, cs_phone, return_address
+                  FROM seller WHERE id = :s
+                """).param("s", p.sellerId()).query(ProductDetail.SellerInfo.class).single();
+        return new ProductDetail(p, doc, media, info);
     }
 }

@@ -41,6 +41,8 @@ export function Settings({ seller, onSaved }: { seller: Seller; onSaved: () => v
     intro: seller.intro, bankName: seller.bankName, bankAccount: seller.bankAccount, bankHolder: seller.bankHolder, payLink: seller.payLink,
     baseShipFee: String(seller.baseShipFee), freeShipMin: seller.freeShipMin == null ? '' : String(seller.freeShipMin),
     freeShipStart: seller.freeShipStart ?? '', freeShipEnd: seller.freeShipEnd ?? '',
+    ceoName: seller.ceoName ?? '', bizAddress: seller.bizAddress ?? '', mailOrderNo: seller.mailOrderNo ?? '',
+    csPhone: seller.csPhone ?? '', returnAddress: seller.returnAddress ?? '',
   });
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setF({ ...f, [k]: e.target.value });
   async function submit(e: React.FormEvent) {
@@ -69,6 +71,19 @@ export function Settings({ seller, onSaved }: { seller: Seller; onSaved: () => v
         <div className="field"><label htmlFor="min">무료배송 기준 금액(원)</label><input id="min" type="number" min={0} value={f.freeShipMin} onChange={set('freeShipMin')} /></div>
         <div className="field"><label htmlFor="fs">무료배송 행사 시작</label><input id="fs" type="date" value={f.freeShipStart} onChange={set('freeShipStart')} /></div>
         <div className="field"><label htmlFor="fe">무료배송 행사 끝</label><input id="fe" type="date" value={f.freeShipEnd} onChange={set('freeShipEnd')} /></div>
+      </div>
+      <h3 style={{ margin: '8px 0 6px' }}>판매자 정보</h3>
+      <p className="hint" style={{ marginTop: 0, marginBottom: 10 }}>상품 화면 아래 “판매자 정보”에 보입니다(전자상거래법에 따른 표시). 계좌 정보는 보이지 않습니다. 빈 칸은 보이지 않습니다.</p>
+      <div className="fields">
+        <div className="field"><label htmlFor="ceo">대표자</label><input id="ceo" maxLength={40} value={f.ceoName} onChange={set('ceoName')} /></div>
+        <div className="field"><label htmlFor="mo">통신판매업 신고번호</label><input id="mo" maxLength={40} placeholder="예: 제2026-서울종로-0000호" value={f.mailOrderNo} onChange={set('mailOrderNo')} /></div>
+        <div className="field"><label htmlFor="cs">고객 전화</label><input id="cs" maxLength={30} inputMode="tel" value={f.csPhone} onChange={set('csPhone')} /></div>
+      </div>
+      <div className="field"><label htmlFor="baddr">사업장 주소</label><input id="baddr" maxLength={300} value={f.bizAddress} onChange={set('bizAddress')} /></div>
+      <div className="field">
+        <label htmlFor="raddr">반품 주소</label>
+        <input id="raddr" maxLength={300} value={f.returnAddress} onChange={set('returnAddress')} />
+        <p className="hint">반품 신청을 승인하면 이 주소가 구매자에게 안내됩니다.</p>
       </div>
       <button className="btn" disabled={act.busy}>저장하기</button>
     </form>

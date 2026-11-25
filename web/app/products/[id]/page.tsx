@@ -6,6 +6,7 @@ import { won } from '@/lib/format';
 import { serverGet } from '@/lib/server';
 import type { ProductDetail } from '@/lib/types';
 import { AddToCart } from './AddToCart';
+import { WishButton } from './WishButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,13 @@ export default async function ProductPage({ params }: Props) {
   if (p.abv != null) specs.push(['도수', p.abv + '%']);
   if (p.volumeMl != null) specs.push(['용량', p.volumeMl >= 1000 && p.volumeMl % 100 === 0 ? p.volumeMl / 1000 + 'L' : p.volumeMl + 'ml']);
   if (p.origin) specs.push(['원재료·원산지', p.origin]);
+  // 전자상거래법상 판매자 정보. 빈 값은 줄을 뺀다.
+  const si = d.sellerInfo;
+  const sellerRows: [string, string][] = si
+    ? ([['상호', si.shopName], ['대표자', si.ceoName], ['사업자등록번호', si.bizNo], ['통신판매업 신고번호', si.mailOrderNo],
+        ['주소', si.bizAddress], ['고객 전화', si.csPhone], ['반품 주소', si.returnAddress]] as [string, string | null | undefined][])
+        .filter((r): r is [string, string] => typeof r[1] === 'string' && r[1].trim() !== '')
+    : [];
 
   return (
     <div className="stack">
@@ -55,6 +63,7 @@ export default async function ProductPage({ params }: Props) {
             </div>
           )}
           <AddToCart productId={p.id} stock={p.stock} />
+          <WishButton productId={p.id} />
           <div className="sheet">
             <h3>{p.shopName}</h3>
             <p>{p.sellerIntro}</p>
@@ -73,6 +82,19 @@ export default async function ProductPage({ params }: Props) {
         <h2 style={{ marginBottom: 14 }}>상품 이야기</h2>
         <RichView doc={d.descriptionDoc} fallback={p.description} />
       </section>
+      {sellerRows.length > 0 && (
+        <section className="sheet" id="seller-info" aria-labelledby="seller-info-title">
+          <h2 id="seller-info-title" style={{ marginBottom: 14 }}>판매자 정보</h2>
+          <div className="scroll">
+            <table className="specs">
+              <tbody>
+                {sellerRows.map(([k, v]) => <tr key={k}><th scope="row">{k}</th><td>{v}</td></tr>)}
+              </tbody>
+            </table>
+          </div>
+          <p className="hint" style={{ marginTop: 10 }}>대금은 판매자에게 직접 보내며, 교환·반품·환불은 판매자가 처리합니다.</p>
+        </section>
+      )}
     </div>
   );
 }

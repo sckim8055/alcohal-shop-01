@@ -54,7 +54,7 @@ public class AdminManageController {
     }
 
     public record Summary(long members, long pendingSellers, long productsOnSale, long awaitingDeposit,
-                          long toShip, long unpaidInvoices) {
+                          long toShip, long unpaidInvoices, long claimsOpen) {
     }
 
     private static final Map<String, Boolean> OK = Map.of("ok", true);
@@ -85,7 +85,8 @@ public class AdminManageController {
                 count("SELECT COUNT(*) FROM product WHERE tenant_id = :t AND status = 'on_sale'"),
                 count("SELECT COUNT(*) FROM sub_order WHERE tenant_id = :t AND status = 'awaiting_deposit'"),
                 count("SELECT COUNT(*) FROM sub_order WHERE tenant_id = :t AND status = 'paid'"),
-                count("SELECT COUNT(*) FROM commission_invoice WHERE tenant_id = :t AND status = 'issued'"));
+                count("SELECT COUNT(*) FROM commission_invoice WHERE tenant_id = :t AND status = 'issued'"),
+                count("SELECT COUNT(*) FROM order_claim WHERE tenant_id = :t AND status IN ('requested', 'approved')"));
     }
 
     private long count(String sql) {

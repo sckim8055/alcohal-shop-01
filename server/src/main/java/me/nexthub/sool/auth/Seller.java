@@ -8,7 +8,8 @@ public record Seller(
         String bankName, String bankAccount, String bankHolder, String payLink,
         String licenseType, String licenseNo, boolean licenseVerified,
         int baseShipFee, Integer freeShipMin, LocalDate freeShipStart, LocalDate freeShipEnd,
-        Integer commissionRateBp) {
+        Integer commissionRateBp,
+        String ceoName, String bizAddress, String mailOrderNo, String returnAddress, String csPhone) {
 
     public boolean approved() {
         return "approved".equals(status);

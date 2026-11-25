@@ -17,7 +17,8 @@ public class Auth {
     public static final String SELLER_SELECT = """
             SELECT id, member_id, shop_name, biz_no, intro, status, bank_name, bank_account, bank_holder, pay_link,
                    license_type, license_no, license_verified, base_ship_fee, free_ship_min,
-                   free_ship_start, free_ship_end, commission_rate_bp
+                   free_ship_start, free_ship_end, commission_rate_bp,
+                   ceo_name, biz_address, mail_order_no, return_address, cs_phone
               FROM seller
             """;
 

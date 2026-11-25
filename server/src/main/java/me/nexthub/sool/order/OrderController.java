@@ -113,6 +113,13 @@ public class OrderController {
         throw ApiException.notFound();
     }
 
+    /** 지난 주문의 상품을 장바구니에 다시 담는다. 본인 주문만. */
+    @PostMapping("/api/orders/{id}/reorder")
+    public OrderService.ReorderResult reorder(@PathVariable("id") long id, HttpServletRequest request) {
+        Member user = auth.requireUser(request);
+        return orders.reorder(user.id(), id);
+    }
+
     @PostMapping("/api/suborders/{id}/report")
     public Map<String, Boolean> report(@PathVariable("id") long id, @RequestBody DepositRequest body,
                                        HttpServletRequest request) {

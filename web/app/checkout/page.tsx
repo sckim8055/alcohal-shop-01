@@ -2,12 +2,12 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { NeedLogin, Note, useAction } from '@/components/Bits';
 import { useMe } from '@/components/Me';
 import { api } from '@/lib/api';
 import { won } from '@/lib/format';
-import type { Cart, CheckoutCouponGroup, CheckoutCouponOption, OrderDetail } from '@/lib/types';
+import type { Address, Cart, CheckoutCouponGroup, CheckoutCouponOption, OrderDetail } from '@/lib/types';
 
 const optionOff = (o: CheckoutCouponOption) => (o.discount ?? 0) + (o.shipDiscount ?? 0);
 const optionLabel = (o: CheckoutCouponOption) => `${o.name}: ${o.shipDiscount > 0 ? '배송비 ' : ''}${won(optionOff(o))} 할인`;
@@ -18,7 +18,19 @@ function Checkout() {
   const act = useAction();
   const [cart, setCart] = useState<Cart | null>(null);
   const [form, setForm] = useState({ receiver: me?.user?.name ?? '', phone: '', address: '', cashReceiptNo: '' });
-  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [k]: e.target.value });
+  const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [k]: e.target.value });
+    // 고른 배송지와 달라지면 "직접 입력"으로 돌린다.
+    if (k !== 'cashReceiptNo') setPickedAddress('');
+  };
+
+  // 저장한 배송지. 불러오지 못해도 직접 입력해서 주문할 수 있다.
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [pickedAddress, setPickedAddress] = useState('');
+  const [saveAddress, setSaveAddress] = useState(false);
+  const formRef = useRef(form);
+  useEffect(() => { formRef.current = form; });
+  const fillFrom = (a: Address) => setForm((f) => ({ ...f, receiver: a.receiver, phone: a.phone, address: a.address }));
 
   // 쿠폰: 가게(sellerId)마다 고른 회원 쿠폰. 쿠폰을 불러오지 못해도 쿠폰 없이 주문할 수 있다.
   const [couponGroups, setCouponGroups] = useState<CheckoutCouponGroup[]>([]);
@@ -30,6 +42,18 @@ function Checkout() {
     api<CheckoutCouponGroup[]>('/checkout/coupons')
       .then((l) => setCouponGroups(Array.isArray(l) ? l : []))
       .catch(() => { setCouponGroups([]); setCouponFailed(true); });
+    api<Address[]>('/my/addresses')
+      .then((l) => {
+        const list = Array.isArray(l) ? l : [];
+        setAddresses(list);
+        // 기본 배송지는 처음부터 채워 둔다. 이미 적은 내용(연락처·주소)이 있으면 덮어쓰지 않는다.
+        const def = list.find((a) => a.isDefault) ?? null;
+        if (def && !formRef.current.phone && !formRef.current.address) {
+          setPickedAddress(String(def.id));
+          fillFrom(def);
+        }
+      })
+      .catch(() => setAddresses([]));
   }, []);
 
   if (!cart) return <p className="muted">불러오는 중입니다.</p>;
@@ -69,6 +93,10 @@ function Checkout() {
       created = await api<OrderDetail>('/orders', { method: 'POST', body: { ...form, coupons } });
     });
     if (ok && created) {
+      // 주문은 이미 끝났다. 배송지 저장에 실패해도 주문 화면으로 간다.
+      if (saveAddress && needsAddress && !pickedAddress) {
+        await api('/my/addresses', { method: 'POST', body: { label: '', receiver: form.receiver.trim(), phone: form.phone.trim(), address: form.address.trim(), isDefault: false } }).catch(() => null);
+      }
       refresh();
       router.push('/orders/' + (created as OrderDetail).order.id);
     }
@@ -79,6 +107,22 @@ function Checkout() {
       <form className="sheet" onSubmit={submit}>
         <h2>받는 분</h2>
         <Note kind="error">{act.error}</Note>
+        {addresses.length > 0 && (
+          <div className="field">
+            <label htmlFor="saved-address">배송지 고르기</label>
+            <select id="saved-address" value={pickedAddress} onChange={(e) => {
+              setPickedAddress(e.target.value);
+              const a = addresses.find((x) => String(x.id) === e.target.value);
+              if (a) { fillFrom(a); setSaveAddress(false); }
+            }}>
+              <option value="">직접 입력</option>
+              {addresses.map((a) => (
+                <option key={a.id} value={a.id}>{(a.label || a.receiver) + (a.isDefault ? ' (기본)' : '') + ': ' + a.address}</option>
+              ))}
+            </select>
+            <p className="hint">고르면 이름·연락처·주소 칸이 채워집니다. <Link href="/my/addresses">배송지 관리</Link></p>
+          </div>
+        )}
         <div className="field">
           <label htmlFor="receiver">이름</label>
           <input id="receiver" required maxLength={40} value={form.receiver} onChange={set('receiver')} />
@@ -91,6 +135,15 @@ function Checkout() {
           <div className="field">
             <label htmlFor="address">주소</label>
             <input id="address" required maxLength={300} value={form.address} onChange={set('address')} />
+          </div>
+        )}
+        {needsAddress && !pickedAddress && (
+          <div className="field">
+            <label className="row" style={{ fontWeight: 400, gap: 8 }}>
+              <input type="checkbox" checked={saveAddress} onChange={(e) => setSaveAddress(e.target.checked)} />
+              이 주소를 배송지로 저장
+            </label>
+            <p className="hint">주문이 끝나면 배송지 관리에 저장합니다. 다음 주문 때 골라 쓸 수 있습니다.</p>
           </div>
         )}
         <div className="field">

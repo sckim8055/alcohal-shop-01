@@ -6,7 +6,7 @@ import { Suspense, useCallback, useEffect, useState } from 'react';
 import { Note, Stamp, useAction } from '@/components/Bits';
 import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
-import { couponOff, when, won } from '@/lib/format';
+import { CLAIM_TYPE_LABEL, claimOpen, couponOff, when, won } from '@/lib/format';
 import type { Carrier, Paged, SellerOrder } from '@/lib/types';
 
 function Row({ o, carriers, reload }: { o: SellerOrder; carriers: Carrier[]; reload: () => void }) {
@@ -18,6 +18,7 @@ function Row({ o, carriers, reload }: { o: SellerOrder; carriers: Carrier[]; rel
   const post = (action: string, body?: unknown) =>
     act.run(() => api('/seller/suborders/' + sub.id + '/' + action, { method: 'POST', body })).then((ok) => ok && reload());
   const canRefund = ['awaiting_deposit', 'paid', 'shipped', 'delivered'].includes(sub.status);
+  const claim = o.sub.claim;
 
   return (
     <section className="sheet">
@@ -26,6 +27,14 @@ function Row({ o, carriers, reload }: { o: SellerOrder; carriers: Carrier[]; rel
         <Stamp status={sub.status} />
       </div>
       <Note kind="error">{act.error}</Note>
+      {claimOpen(claim) && (
+        <div className="note error">
+          {claim.status === 'requested'
+            ? <>{CLAIM_TYPE_LABEL[claim.claimType]} 신청이 들어왔습니다. </>
+            : <>승인한 {CLAIM_TYPE_LABEL[claim.claimType]} 신청이 마무리를 기다립니다. </>}
+          <Link href={'/seller/claims?status=' + claim.status}>신청 처리하러 가기</Link>
+        </div>
+      )}
       <p>
         {when(o.order.createdAt)} 주문, {o.sub.items.map((i) => i.name + ' × ' + i.qty).join(', ')}<br />
         받는 분 {o.order.receiver} ({o.order.phone}){o.order.address && <>, {o.order.address}</>}<br />

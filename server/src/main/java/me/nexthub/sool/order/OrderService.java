@@ -14,6 +14,8 @@ import java.util.Set;
 
 import me.nexthub.sool.auth.Member;
 import me.nexthub.sool.catalog.Catalog;
+import me.nexthub.sool.catalog.ProductView;
+import me.nexthub.sool.claim.ClaimQuery;
 import me.nexthub.sool.common.ApiException;
 import me.nexthub.sool.common.AppClock;
 import me.nexthub.sool.common.Db;
@@ -48,11 +50,15 @@ public class OrderService {
     private final TrackingService tracking;
     private final NotificationService notifications;
     private final CouponService coupons;
+    private final ClaimQuery claims;
+    private final Catalog catalog;
 
     public OrderService(JdbcClient db, Tenant tenant, AppClock clock, TrackingService tracking,
-                        NotificationService notifications, CouponService coupons) {
+                        NotificationService notifications, CouponService coupons, ClaimQuery claims, Catalog catalog) {
         this.notifications = notifications;
         this.coupons = coupons;
+        this.claims = claims;
+        this.catalog = catalog;
         this.db = db;
         this.tenant = tenant;
         this.clock = clock;
@@ -159,6 +165,62 @@ public class OrderService {
         } else {
             db.sql("UPDATE cart_item SET qty = :q WHERE member_id = :m AND product_id = :p")
                     .param("q", qty).param("m", memberId).param("p", productId).update();
+        }
+    }
+
+    /** 다시 담기 결과. added 는 장바구니에 담은 상품 가짓수, skipped 는 담지 못한 상품 이름 */
+    public record ReorderResult(int added, List<String> skipped) {
+    }
+
+    private record OrderedLine(long productId, String name, int qty) {
+    }
+
+    /**
+     * 지난 주문의 상품을 장바구니에 다시 담는다. 지금 판매 중이고 재고가 있는 것만,
+     * 장바구니에 이미 있던 수량과 합쳐 재고와 99개를 넘지 않게 담는다. 본인 주문이 아니면 404.
+     */
+    @Transactional
+    public ReorderResult reorder(long memberId, long orderId) {
+        Long buyer = db.sql("SELECT buyer_id FROM shop_order WHERE id = :id AND tenant_id = :t")
+                .param("id", orderId).param("t", tenant.id()).query(Long.class).optional().orElse(null);
+        if (buyer == null || buyer != memberId) {
+            throw ApiException.notFound();
+        }
+        // 같은 상품이 여러 줄이면 합친다. 이름은 주문 시점 이름(지금 이름이 바뀌었어도 구매자가 알아보는 이름)
+        Map<Long, OrderedLine> lines = new LinkedHashMap<>();
+        for (OrderedLine l : db.sql("""
+                SELECT oi.product_id, oi.name, oi.qty FROM order_item oi JOIN sub_order so ON so.id = oi.sub_order_id
+                 WHERE so.order_id = :o ORDER BY so.id, oi.id
+                """).param("o", orderId).query(OrderedLine.class).list()) {
+            OrderedLine before = lines.get(l.productId());
+            lines.put(l.productId(), before == null ? l
+                    : new OrderedLine(l.productId(), before.name(), before.qty() + l.qty()));
+        }
+        int added = 0;
+        List<String> skipped = new ArrayList<>();
+        for (OrderedLine l : lines.values()) {
+            ProductView p = catalog.find(l.productId());
+            if (p == null || !p.onSale() || p.stock() <= 0) {
+                skipped.add(l.name());
+                continue;
+            }
+            int inCart = db.sql("SELECT COALESCE(SUM(qty), 0) FROM cart_item WHERE member_id = :m AND product_id = :p")
+                    .param("m", memberId).param("p", p.id()).query(Integer.class).single();
+            int target = Math.min(inCart + l.qty(), Math.min(p.stock(), 99));
+            if (target > inCart) {
+                setCartQty(memberId, p.id(), target, inCart > 0);
+            }
+            added++;
+        }
+        return new ReorderResult(added, skipped);
+    }
+
+    private void setCartQty(long memberId, long productId, int qty, boolean exists) {
+        if (exists) {
+            setCartQty(memberId, productId, qty);
+        } else {
+            db.sql("INSERT INTO cart_item (member_id, product_id, qty) VALUES (:m, :p, :q)")
+                    .param("m", memberId).param("p", productId).param("q", qty).update();
         }
     }
 
@@ -381,6 +443,12 @@ public class OrderService {
         return "/orders/" + p.orderId();
     }
 
+    /** UPDATE sub_order 안에서 쓰는 조건: 진행 중인 취소·반품·교환 신청이 없을 때 */
+    private static final String NO_OPEN_CLAIM = """
+             AND NOT EXISTS (SELECT 1 FROM order_claim oc
+                              WHERE oc.sub_order_id = sub_order.id AND oc.status IN ('requested', 'approved'))
+            """;
+
     private static void mustChange(int changed, String message) {
         if (changed != 1) {
             throw ApiException.conflict(message);
@@ -447,9 +515,15 @@ public class OrderService {
         if (!tracking.knownCarrier(carrier) || trackingNo.isEmpty()) {
             throw ApiException.bad("택배사와 송장번호를 입력해 주세요.");
         }
+        // 취소 신청이 들어와 있으면 먼저 답해야 한다. 보낸 뒤에 취소를 승인하면 재고와 물건이 어긋난다.
+        if (claims.hasOpen(subId)) {
+            throw ApiException.conflict("취소 신청이 들어와 있습니다. 먼저 승인하거나 거절해 주세요.");
+        }
         mustChange(db.sql("""
                 UPDATE sub_order SET status = 'shipped', carrier = :c, tracking_no = :n, shipped_at = :now
                  WHERE id = :id AND seller_id = :s AND status = 'paid' AND has_physical = TRUE
+                   AND NOT EXISTS (SELECT 1 FROM order_claim oc
+                                    WHERE oc.sub_order_id = sub_order.id AND oc.status IN ('requested', 'approved'))
                 """).param("c", carrier).param("n", trackingNo).param("now", clock.now())
                 .param("id", subId).param("s", sellerId).update(), NOT_ALLOWED);
         Party p = party(subId);
@@ -469,16 +543,31 @@ public class OrderService {
 
     /** 구매자: 수령 확인(구매확정) */
     public void confirmReceipt(long subId, long buyerId) {
+        // 반품·교환이 진행 중이면 구매확정을 막는다. 확정 뒤 7일이 지나면 반품을 신청할 수 없게 되기 때문이다.
         mustChange(db.sql("""
                 UPDATE sub_order SET status = 'completed', completed_at = :now, delivered_at = COALESCE(delivered_at, :now)
                  WHERE id = :id AND status IN ('shipped', 'delivered')
                    AND order_id IN (SELECT id FROM shop_order WHERE buyer_id = :b)
-                """).param("now", clock.now()).param("id", subId).param("b", buyerId).update(), NOT_ALLOWED);
+                """ + NO_OPEN_CLAIM).param("now", clock.now()).param("id", subId).param("b", buyerId).update(),
+                claims.hasOpen(subId) ? "진행 중인 취소·반품·교환 신청이 있어 구매확정을 할 수 없습니다." : NOT_ALLOWED);
     }
 
     /** 판매자: 환불 완료 기록. 돈은 판매자가 구매자에게 직접 돌려준다. */
     @Transactional
     public void refund(long subId, long sellerId) {
+        refund(subId, sellerId, false);
+    }
+
+    /**
+     * 반품 완료용 환불 기록. 구매확정 뒤 7일 안의 반품도 받으므로 completed 상태도 환불할 수 있다.
+     * 일반 환불 단추는 구매확정된 주문을 환불하지 못하게 그대로 둔다.
+     */
+    @Transactional
+    public void refundReturned(long subId, long sellerId) {
+        refund(subId, sellerId, true);
+    }
+
+    private void refund(long subId, long sellerId, boolean allowCompleted) {
         // 발송 전 환불만 재고를 되돌린다. 발송 전 상태에서 먼저 시도하고, 아니면 발송 후 상태에서 시도한다.
         int beforeShipping = db.sql("""
                 UPDATE sub_order SET status = 'refunded', closed_at = :now, close_reason = '판매자 환불'
@@ -487,15 +576,30 @@ public class OrderService {
         if (beforeShipping == 1) {
             restoreStock(subId);
             coupons.restore(subId);
+            closeOpenClaims(subId);
             notifyRefund(subId);
             return;
         }
         mustChange(db.sql("""
                 UPDATE sub_order SET status = 'refunded', closed_at = :now, close_reason = '판매자 환불'
-                 WHERE id = :id AND seller_id = :s AND status IN ('shipped', 'delivered')
-                """).param("now", clock.now()).param("id", subId).param("s", sellerId).update(), NOT_ALLOWED);
+                 WHERE id = :id AND seller_id = :s AND status IN ('shipped', 'delivered'"""
+                + (allowCompleted ? ", 'completed'" : "") + ")")
+                .param("now", clock.now()).param("id", subId).param("s", sellerId).update(), NOT_ALLOWED);
         coupons.restore(subId);
+        closeOpenClaims(subId);
         notifyRefund(subId);
+    }
+
+    /**
+     * 판매자가 신청을 거치지 않고 주문 처리 화면에서 바로 환불하면, 남아 있던 신청은 할 일이 없어진다.
+     * 진행 중으로 두면 탈퇴·구매확정이 계속 막히므로 끝난 것으로 닫는다.
+     */
+    private void closeOpenClaims(long subId) {
+        db.sql("""
+                UPDATE order_claim SET status = 'done', done_at = :now, answered_at = COALESCE(answered_at, :now),
+                       seller_note = COALESCE(seller_note, '판매자가 환불로 처리했습니다.')
+                 WHERE sub_order_id = :s AND status IN ('requested', 'approved')
+                """).param("now", clock.now()).param("s", subId).update();
     }
 
     private void notifyRefund(long subId) {
@@ -550,10 +654,11 @@ public class OrderService {
             }
         }
 
+        // 진행 중인 신청이 있는 주문은 자동 구매확정에서 건너뛴다(신청이 끝난 뒤 다음 정리 때 확정된다).
         db.sql("""
                 UPDATE sub_order SET status = 'completed', completed_at = :now
                  WHERE tenant_id = :t AND status = 'delivered' AND delivered_at < :limit
-                """).param("now", now).param("t", tenant.id()).param("limit", now.minusDays(AUTO_COMPLETE_DAYS)).update();
+                """ + NO_OPEN_CLAIM).param("now", now).param("t", tenant.id()).param("limit", now.minusDays(AUTO_COMPLETE_DAYS)).update();
         return cancelled;
     }
 
@@ -611,7 +716,8 @@ public class OrderService {
                 SELECT id, sub_order_id, product_id, name, product_type, unit_price, qty, commission_rate_bp, coupon_discount
                   FROM order_item WHERE sub_order_id = :s ORDER BY id
                 """).param("s", s.id()).query(OrderDetail.Item.class).list();
-        return new OrderDetail.Sub(s, items, tracking.track(s.carrier(), s.trackingNo(), s.shippedAt()));
+        return new OrderDetail.Sub(s, items, tracking.track(s.carrier(), s.trackingNo(), s.shippedAt()),
+                claims.latestForSub(s.id()));
     }
 
     /** 판매자 화면용: 내 가게로 들어온 판매자별 주문과 배송지 */

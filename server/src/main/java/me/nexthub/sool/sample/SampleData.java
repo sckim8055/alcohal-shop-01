@@ -6,6 +6,7 @@ import java.util.List;
 
 import me.nexthub.sool.admin.InvoiceService;
 import me.nexthub.sool.auth.Auth;
+import me.nexthub.sool.claim.ClaimService;
 import me.nexthub.sool.common.AppClock;
 import me.nexthub.sool.common.Db;
 import me.nexthub.sool.common.Passwords;
@@ -34,10 +35,13 @@ public class SampleData implements ApplicationRunner {
     private final Auth auth;
     private final OrderService orders;
     private final InvoiceService invoices;
+    private final ClaimService claims;
     private final boolean enabled;
 
     public SampleData(JdbcClient db, Tenant tenant, AppClock clock, Auth auth, OrderService orders,
-                      InvoiceService invoices, @Value("${sool.sample-data:false}") boolean enabled) {
+                      InvoiceService invoices, ClaimService claims,
+                      @Value("${sool.sample-data:false}") boolean enabled) {
+        this.claims = claims;
         this.db = db;
         this.tenant = tenant;
         this.clock = clock;
@@ -57,7 +61,8 @@ public class SampleData implements ApplicationRunner {
 
     /** 테스트 전용: 모든 업무 데이터를 지우고 설정을 처음 값으로 돌린다. */
     public void reset() {
-        for (String table : List.of("member_coupon", "coupon", "order_item", "sub_order", "shop_order", "cart_item", "commission_invoice",
+        // 외래 키 순서: 신청 → 판매자별 주문, 찜 → 상품, 배송지 → 회원
+        for (String table : List.of("order_claim", "wishlist", "member_address", "member_coupon", "coupon", "order_item", "sub_order", "shop_order", "cart_item", "commission_invoice",
                 "commission_rate_log", "post", "product_media", "product", "seller", "upload_file",
                 "notification", "message_outbox", "member")) {
             db.sql("DELETE FROM " + table).update();
@@ -91,6 +96,10 @@ public class SampleData implements ApplicationRunner {
                 "000-0000-0002", "도담공방", "", "", "", false, 3500, 40000);
         long supplies = seller(mSupplies, "누룩과 쌀", "000-00-00003", "술 빚는 재료와 기구, 빚기 수업을 준비합니다.", "approved",
                 "000-0000-0003", "누룩과쌀", "https://example.com/pay/nuruk", "", "", false, 3000, null);
+        sellerInfo(brew, "김한울", "시범시 한울구 양조길 1", 1);
+        sellerInfo(orchard, "박달빛", "시범시 달빛면 과수원길 2", 2);
+        sellerInfo(cups, "이도담", "시범시 도담동 공방로 3", 3);
+        sellerInfo(supplies, "최누룩", "시범시 누룩읍 재료로 4", 4);
         seller(mNew, "새내기 가게", "000-00-00004", "입점 심사를 기다리는 가게입니다.", "pending",
                 "", "", "", "", "", false, 3500, null);
 
@@ -147,6 +156,34 @@ public class SampleData implements ApplicationRunner {
                 null, null, null, "physical", "draft");
         attributes();
         coupons(supplies, cups, today);
+        long buyer = memberId("buyer@test.local");
+        address(buyer, "집", "김구매", "010-0000-0000", "시범시 시범구 시범로 1", true);
+        address(buyer, "회사", "김구매", "010-0000-0001", "시범시 일터구 회사로 2, 3층", false);
+    }
+
+    /** 지어낸 판매자 정보(대표자, 사업장 주소, 통신판매업 신고번호, 반품 주소, 고객 전화) */
+    private void sellerInfo(long sellerId, String ceoName, String address, int n) {
+        db.sql("""
+                UPDATE seller SET ceo_name = :ceo, biz_address = :a, mail_order_no = :mon, return_address = :ra,
+                       cs_phone = :cs WHERE id = :id
+                """)
+                .param("ceo", ceoName).param("a", address).param("mon", "제2026-시범-000" + n + "호")
+                .param("ra", address + " (반품 받는 곳)").param("cs", "000-0000-000" + n).param("id", sellerId).update();
+    }
+
+    private void address(long memberId, String label, String receiver, String phone, String address, boolean isDefault) {
+        db.sql("""
+                INSERT INTO member_address (tenant_id, member_id, label, receiver, phone, address, is_default, created_at)
+                VALUES (:t, :m, :label, :r, :p, :a, :d, :now)
+                """)
+                .param("t", tenant.id()).param("m", memberId).param("label", label).param("r", receiver)
+                .param("p", phone).param("a", address).param("d", isDefault).param("now", clock.now()).update();
+    }
+
+    private void wish(long memberId, String productName) {
+        db.sql("INSERT INTO wishlist (tenant_id, member_id, product_id, created_at) VALUES (:t, :m, :p, :now)")
+                .param("t", tenant.id()).param("m", memberId).param("p", productId(productName))
+                .param("now", clock.now()).update();
     }
 
     /** 시범 쿠폰. 기존 시범 회원에게는 미리 주지 않는다(기존 테스트의 금액이 바뀌지 않게). */
@@ -256,6 +293,15 @@ public class SampleData implements ApplicationRunner {
         long o7sub = subOf(o7, supplies);
         orders.reportDeposit(o7sub, regular, "이단골");
         orders.confirmDeposit(o7sub, supplies, null);
+
+        // 8) 취소·반품·교환 신청: 발송 대기 주문의 취소 신청, 배송 중인 주문의 교환 신청
+        claims.request(regular, o7sub, new ClaimService.ClaimRequest("cancel", "changed_mind", "다른 크기로 다시 주문하려고 합니다."));
+        claims.request(buyer, o2brew, new ClaimService.ClaimRequest("exchange", "defect", "병뚜껑 둘레가 새어 있었습니다."));
+
+        // 9) 찜
+        wish(buyer, "달빛 오미자주 500ml");
+        wish(buyer, "옹기 술독 5L");
+        wish(buyer, "막걸리 빚기 하루 수업");
 
         invoices.generate(YearMonth.from(clock.today()).toString());
 

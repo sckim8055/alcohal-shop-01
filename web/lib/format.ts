@@ -1,4 +1,4 @@
-import type { Coupon, Invoice, SubRow, SubStatus } from './types';
+import type { Claim, ClaimStatus, ClaimType, Coupon, Invoice, ReasonCode, SubRow, SubStatus } from './types';
 
 export const won = (n: number) => n.toLocaleString('ko-KR') + '원';
 
@@ -85,3 +85,14 @@ export const couponOff = (s: SubRow) => (s.itemDiscount ?? 0) + (s.shipDiscount 
 
 /** 청구서에서 실제로 낼 금액. 서버가 net 을 보내지 않으면 직접 계산한다. */
 export const invoiceNet = (i: Invoice) => i.net ?? i.amount - (i.platformCouponCredit ?? 0);
+
+// ---- 취소·반품·교환 ----
+export const CLAIM_TYPE_LABEL: Record<ClaimType, string> = { cancel: '취소', return: '반품', exchange: '교환' };
+export const CLAIM_STATUS_LABEL: Record<ClaimStatus, string> = {
+  requested: '신청됨', approved: '승인됨', rejected: '거절됨', done: '처리 완료', withdrawn: '철회함',
+};
+export const REASON_LABEL: Record<ReasonCode, string> = {
+  changed_mind: '단순 변심', defect: '상품 불량', wrong_item: '다른 상품이 옴', late: '배송 지연', other: '기타',
+};
+/** 아직 끝나지 않은 신청(신청됨·승인됨)인지 */
+export const claimOpen = (c: Claim | null | undefined): c is Claim => !!c && (c.status === 'requested' || c.status === 'approved');

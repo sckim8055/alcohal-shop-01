@@ -478,6 +478,7 @@ class CouponTest {
         Api seller = as("cups@test.local");
         Api buyer = as("buyer@test.local");
         Map<String, Object> signup = couponBody("가입 쿠폰", "amount", 1000, "signup");
+        signup.put("minOrder", 1000);
         assertEquals(400, seller.post("/api/seller/coupons", signup).status());
         Map<String, Object> platform = couponBody("플랫폼인 척", "amount", 1000, "download");
         platform.put("issuer", "platform");
@@ -496,14 +497,17 @@ class CouponTest {
 
         Map<String, Object> dup = couponBody("겹치는 코드", "amount", 1000, "code");
         dup.put("code", "Sool-Free");
+        dup.put("minOrder", 1000);
         assertEquals(409, seller.post("/api/seller/coupons", dup).status());
         assertEquals(400, seller.post("/api/seller/coupons", couponBody("", "amount", 1000, "download")).status());
         assertEquals(400, seller.post("/api/seller/coupons", couponBody("너무 큼", "percent", 91, "download")).status());
         assertEquals(400, seller.post("/api/seller/coupons", couponBody("너무 작음", "amount", 99, "download")).status());
         Map<String, Object> badDates = couponBody("거꾸로", "amount", 1000, "download");
         badDates.put("validTo", clock.today().minusDays(1).toString());
+        badDates.put("minOrder", 1000);
         assertEquals(400, seller.post("/api/seller/coupons", badDates).status());
         Map<String, Object> noCode = couponBody("코드 없음", "amount", 1000, "code");
+        noCode.put("minOrder", 1000);
         assertEquals(400, seller.post("/api/seller/coupons", noCode).status());
 
         JsonNode list = seller.get("/api/seller/coupons").body();
@@ -527,6 +531,7 @@ class CouponTest {
         assertEquals(400, admin.get("/api/admin/coupons?issuer=nobody").status());
 
         Map<String, Object> body = couponBody("단골 감사 1,000원", "amount", 1000, "grant");
+        body.put("minOrder", 1000);
         body.put("excludeAlcohol", false);
         Api.Res r = admin.post("/api/admin/coupons", body);
         assertEquals(200, r.status(), String.valueOf(r.body()));

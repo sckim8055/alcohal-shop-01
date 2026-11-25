@@ -1,11 +1,66 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Note, useAction } from '@/components/Bits';
 import { useMe } from '@/components/Me';
 import { api } from '@/lib/api';
 import { when } from '@/lib/format';
+
+/** 회원 탈퇴: 무엇이 지워지고 남는지 알려 주고, 비밀번호와 한 번 더 확인을 받은 뒤 탈퇴한다. */
+function Withdraw() {
+  const router = useRouter();
+  const { refresh } = useMe();
+  const act = useAction();
+  const [password, setPassword] = useState('');
+  const [confirming, setConfirming] = useState(false);
+
+  function ask(e: React.FormEvent) {
+    e.preventDefault();
+    act.setError('');
+    setConfirming(true);
+  }
+  async function withdraw() {
+    const ok = await act.run(() => api('/me/withdraw', { method: 'POST', body: { password } }));
+    if (ok) {
+      // 첫 화면으로 먼저 옮긴 뒤 로그인 상태를 새로 읽는다(마이 화면이 로그인 안내로 바뀌지 않도록).
+      router.push('/');
+      refresh();
+    } else {
+      setConfirming(false);
+    }
+  }
+
+  return (
+    <form className="sheet" onSubmit={ask} aria-labelledby="withdraw-title">
+      <h2 id="withdraw-title">회원 탈퇴</h2>
+      <Note kind="error">{act.error}</Note>
+      <p>탈퇴하면 다시 되돌릴 수 없습니다.</p>
+      <ul>
+        <li>지워지는 것: 장바구니, 찜한 상품, 저장한 배송지, 아직 쓰지 않은 쿠폰, 이름과 이메일</li>
+        <li>남는 것: 주문 기록 (거래 기록은 법에 따라 보관합니다)</li>
+      </ul>
+      <p className="small">끝나지 않은 주문이나 진행 중인 취소·반품·교환 신청이 있으면 탈퇴할 수 없습니다. 가게를 운영하는 판매자는 운영자에게 문의해 주세요.</p>
+      <div className="field">
+        <label htmlFor="wd-pw">비밀번호</label>
+        <input id="wd-pw" type="password" autoComplete="current-password" required value={password}
+          onChange={(e) => { setPassword(e.target.value); setConfirming(false); }} disabled={act.busy} />
+      </div>
+      {!confirming ? (
+        <button className="btn plain" disabled={act.busy}>탈퇴하기</button>
+      ) : (
+        <div className="note error" role="alertdialog" aria-labelledby="wd-confirm">
+          <p id="wd-confirm"><strong>정말 탈퇴할까요?</strong> 탈퇴하면 바로 로그아웃되고 첫 화면으로 돌아갑니다.</p>
+          <div className="row">
+            <button className="btn" type="button" disabled={act.busy} onClick={withdraw} autoFocus>네, 탈퇴합니다</button>
+            <button className="btn plain" type="button" disabled={act.busy} onClick={() => setConfirming(false)}>그만두기</button>
+          </div>
+        </div>
+      )}
+    </form>
+  );
+}
 
 export default function Profile() {
   const { me, refresh } = useMe();
@@ -56,6 +111,7 @@ export default function Profile() {
         <div className="field"><label htmlFor="again">새 비밀번호 한 번 더</label><input id="again" type="password" autoComplete="new-password" required minLength={8} value={pw.again} onChange={(e) => setPw({ ...pw, again: e.target.value })} /></div>
         <button className="btn" disabled={pwAct.busy}>비밀번호 바꾸기</button>
       </form>
+      <Withdraw />
     </div>
   );
 }

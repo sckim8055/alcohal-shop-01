@@ -57,7 +57,9 @@ public class SellerController {
     }
 
     public record SettingsRequest(String intro, String bankName, String bankAccount, String bankHolder, String payLink,
-                                  Integer baseShipFee, Integer freeShipMin, String freeShipStart, String freeShipEnd) {
+                                  Integer baseShipFee, Integer freeShipMin, String freeShipStart, String freeShipEnd,
+                                  String ceoName, String bizAddress, String mailOrderNo, String returnAddress,
+                                  String csPhone) {
     }
 
     public record MediaRequest(String kind, String url) {
@@ -85,9 +87,19 @@ public class SellerController {
     public record StatusCount(String status, int count) {
     }
 
-    public record Dashboard(Seller seller, List<StatusCount> orderCounts, List<StatusCount> productCounts,
-                            List<InvoiceService.Invoice> invoices) {
+    /**
+     * 처리할 일. claimsRequested: 답하지 않은 신청, returnsApproved: 승인한 뒤 끝내지 않은 반품·교환,
+     * soldOut: 판매 중인데 재고 0, shipLate: 입금 확인 후 3일이 지나도록 보내지 않은 실물 주문.
+     */
+    public record Todo(long claimsRequested, long returnsApproved, long soldOut, long shipLate) {
     }
+
+    public record Dashboard(Seller seller, List<StatusCount> orderCounts, List<StatusCount> productCounts,
+                            List<InvoiceService.Invoice> invoices, Todo todo) {
+    }
+
+    /** 입금 확인 후 이 날 수가 지나도록 보내지 않으면 "발송이 늦은 주문"으로 센다 */
+    public static final int SHIP_LATE_DAYS = 3;
 
     private static final Map<String, Boolean> OK = Map.of("ok", true);
 
@@ -148,7 +160,29 @@ public class SellerController {
                 .param("s", seller.id()).query(StatusCount.class).list();
         List<StatusCount> productCounts = db.sql("SELECT status, COUNT(*) AS count FROM product WHERE seller_id = :s GROUP BY status")
                 .param("s", seller.id()).query(StatusCount.class).list();
-        return new Dashboard(seller, orderCounts, productCounts, invoices.listForSeller(seller.id()));
+        return new Dashboard(seller, orderCounts, productCounts, invoices.listForSeller(seller.id()), todo(seller.id()));
+    }
+
+    private Todo todo(long sellerId) {
+        return new Todo(
+                count("""
+                        SELECT COUNT(*) FROM order_claim c JOIN sub_order so ON so.id = c.sub_order_id
+                         WHERE so.seller_id = :s AND c.status = 'requested'
+                        """, sellerId),
+                count("""
+                        SELECT COUNT(*) FROM order_claim c JOIN sub_order so ON so.id = c.sub_order_id
+                         WHERE so.seller_id = :s AND c.status = 'approved' AND c.claim_type IN ('return', 'exchange')
+                        """, sellerId),
+                count("SELECT COUNT(*) FROM product WHERE seller_id = :s AND status = 'on_sale' AND stock = 0", sellerId),
+                db.sql("""
+                        SELECT COUNT(*) FROM sub_order
+                         WHERE seller_id = :s AND status = 'paid' AND has_physical = TRUE AND deposit_confirmed_at < :limit
+                        """).param("s", sellerId).param("limit", clock.now().minusDays(SHIP_LATE_DAYS))
+                        .query(Long.class).single());
+    }
+
+    private long count(String sql, long sellerId) {
+        return db.sql(sql).param("s", sellerId).query(Long.class).single();
     }
 
     @PutMapping("/api/seller/settings")
@@ -163,9 +197,13 @@ public class SellerController {
         }
         db.sql("""
                 UPDATE seller SET intro = :intro, bank_name = :bn, bank_account = :ba, bank_holder = :bh, pay_link = :link,
-                       base_ship_fee = :fee, free_ship_min = :min, free_ship_start = :fs, free_ship_end = :fe
+                       base_ship_fee = :fee, free_ship_min = :min, free_ship_start = :fs, free_ship_end = :fe,
+                       ceo_name = :ceo, biz_address = :ba2, mail_order_no = :mon, return_address = :ra, cs_phone = :cs
                  WHERE id = :id
                 """)
+                .param("ceo", Text.clean(body.ceoName(), 40)).param("ba2", Text.clean(body.bizAddress(), 300))
+                .param("mon", Text.clean(body.mailOrderNo(), 40)).param("ra", Text.clean(body.returnAddress(), 300))
+                .param("cs", Text.clean(body.csPhone(), 30))
                 .param("intro", Text.clean(body.intro(), 500)).param("bn", Text.clean(body.bankName(), 30))
                 .param("ba", Text.clean(body.bankAccount(), 40)).param("bh", Text.clean(body.bankHolder(), 40))
                 .param("link", link).param("fee", fee).param("min", freeMin)

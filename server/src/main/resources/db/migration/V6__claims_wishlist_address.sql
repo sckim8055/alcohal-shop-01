@@ -1,0 +1,61 @@
+-- 취소·반품·교환 신청, 찜, 배송지, 판매자 정보(docs/adr/0002-claims-wishlist-address.md).
+
+-- 판매자별 주문 하나에 대한 구매자의 신청. 돈은 판매자가 직접 돌려주고, 여기에는 과정만 남긴다.
+CREATE TABLE order_claim (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id    BIGINT       NOT NULL,
+    sub_order_id BIGINT       NOT NULL,
+    member_id    BIGINT       NOT NULL,
+    claim_type   VARCHAR(10)  NOT NULL,
+    reason_code  VARCHAR(20)  NOT NULL,
+    reason_text  VARCHAR(500) NOT NULL DEFAULT '',
+    status       VARCHAR(10)  NOT NULL DEFAULT 'requested',
+    seller_note  VARCHAR(500),
+    carrier      VARCHAR(20),
+    tracking_no  VARCHAR(40),
+    requested_at DATETIME(6)  NOT NULL,
+    answered_at  DATETIME(6),
+    done_at      DATETIME(6),
+    CONSTRAINT fk_claim_tenant FOREIGN KEY (tenant_id) REFERENCES tenant (id),
+    CONSTRAINT fk_claim_sub FOREIGN KEY (sub_order_id) REFERENCES sub_order (id),
+    CONSTRAINT fk_claim_member FOREIGN KEY (member_id) REFERENCES member (id),
+    CONSTRAINT ck_claim_type CHECK (claim_type IN ('cancel', 'return', 'exchange')),
+    CONSTRAINT ck_claim_reason CHECK (reason_code IN ('changed_mind', 'defect', 'wrong_item', 'late', 'other')),
+    CONSTRAINT ck_claim_status CHECK (status IN ('requested', 'approved', 'rejected', 'done', 'withdrawn'))
+);
+CREATE INDEX idx_claim_sub ON order_claim (sub_order_id);
+CREATE INDEX idx_claim_status ON order_claim (tenant_id, status);
+
+CREATE TABLE wishlist (
+    tenant_id  BIGINT      NOT NULL,
+    member_id  BIGINT      NOT NULL,
+    product_id BIGINT      NOT NULL,
+    created_at DATETIME(6) NOT NULL,
+    PRIMARY KEY (member_id, product_id),
+    CONSTRAINT fk_wish_tenant FOREIGN KEY (tenant_id) REFERENCES tenant (id),
+    CONSTRAINT fk_wish_member FOREIGN KEY (member_id) REFERENCES member (id),
+    CONSTRAINT fk_wish_product FOREIGN KEY (product_id) REFERENCES product (id)
+);
+CREATE INDEX idx_wish_member ON wishlist (member_id, created_at);
+
+CREATE TABLE member_address (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id  BIGINT       NOT NULL,
+    member_id  BIGINT       NOT NULL,
+    label      VARCHAR(30)  NOT NULL DEFAULT '',
+    receiver   VARCHAR(40)  NOT NULL,
+    phone      VARCHAR(30)  NOT NULL,
+    address    VARCHAR(300) NOT NULL,
+    is_default BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at DATETIME(6)  NOT NULL,
+    CONSTRAINT fk_address_tenant FOREIGN KEY (tenant_id) REFERENCES tenant (id),
+    CONSTRAINT fk_address_member FOREIGN KEY (member_id) REFERENCES member (id)
+);
+CREATE INDEX idx_address_member ON member_address (member_id);
+
+-- 전자상거래법상 상품 화면에 보여 줄 판매자 정보
+ALTER TABLE seller ADD COLUMN ceo_name VARCHAR(40) NOT NULL DEFAULT '';
+ALTER TABLE seller ADD COLUMN biz_address VARCHAR(300) NOT NULL DEFAULT '';
+ALTER TABLE seller ADD COLUMN mail_order_no VARCHAR(40) NOT NULL DEFAULT '';
+ALTER TABLE seller ADD COLUMN return_address VARCHAR(300) NOT NULL DEFAULT '';
+ALTER TABLE seller ADD COLUMN cs_phone VARCHAR(30) NOT NULL DEFAULT '';
