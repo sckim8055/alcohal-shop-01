@@ -23,3 +23,16 @@ export const STATUS_LABEL: Record<SubStatus, string> = {
   cancelled: '취소',
   refunded: '환불',
 };
+
+export const PRODUCT_STATUS_LABEL: Record<string, string> = {
+  draft: '임시저장',
+  on_sale: '판매 중',
+  paused: '판매 중지',
+  ended: '판매 종료',
+  blocked: '운영자 차단',
+};
+
+/** 대분류와 그 아래 중분류로 묶는다. */
+export function categoryTree<T extends { id: number; parentId: number | null }>(list: T[]): { top: T; children: T[] }[] {
+  return list.filter((c) => c.parentId == null).map((top) => ({ top, children: list.filter((c) => c.parentId === top.id) }));
+}

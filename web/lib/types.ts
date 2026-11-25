@@ -10,16 +10,25 @@ export type Seller = {
   commissionRateBp: number | null;
 };
 
-export type Me = { user: Member | null; seller: Seller | null; csrfToken: string; cartCount: number };
+export type Me = { user: Member | null; seller: Seller | null; csrfToken: string; cartCount: number; unreadCount: number };
 
-export type Category = { id: number; name: string; alcohol: boolean; commissionRateBp: number | null };
+/** 목록 한 쪽. page 는 1부터 */
+export type Paged<T> = { items: T[]; page: number; size: number; total: number };
+
+export type Category = { id: number; parentId: number | null; name: string; alcohol: boolean; commissionRateBp: number | null; sortOrder: number; active: boolean };
 
 export type Product = {
   id: number; sellerId: number; categoryId: number; name: string; description: string; productType: 'physical' | 'ticket';
   price: number; salePrice: number | null; saleStart: string | null; saleEnd: string | null; currentPrice: number;
-  stock: number; status: 'active' | 'hidden'; categoryName: string; alcohol: boolean;
+  stock: number; status: ProductStatus; categoryName: string; topCategoryName: string; alcohol: boolean;
+  abv: number | null; volumeMl: number | null; origin: string; mainImage: string | null;
   shopName: string; sellerStatus: string; sellerIntro: string; baseShipFee: number; freeShipMin: number | null;
 };
+
+export type ProductStatus = 'draft' | 'on_sale' | 'paused' | 'ended' | 'blocked';
+export type Media = { kind: 'image' | 'video' | 'youtube'; url: string };
+export type ProductDetail = { product: Product; descriptionDoc: string | null; media: Media[] };
+export type Notification = { id: number; title: string; body: string; link: string; readAt: string | null; createdAt: string };
 
 export type CartLine = {
   productId: number; name: string; productType: string; categoryName: string; alcohol: boolean;

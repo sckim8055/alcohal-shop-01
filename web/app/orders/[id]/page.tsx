@@ -100,7 +100,7 @@ function Detail() {
   }, [id]);
   useEffect(load, [load]);
 
-  if (missing) return <div className="sheet"><h3>주문을 찾을 수 없습니다</h3><Link className="btn" href="/orders">주문내역으로</Link></div>;
+  if (missing) return <div className="sheet"><h3>주문을 찾을 수 없습니다</h3><Link className="btn" href="/my/orders">주문목록으로</Link></div>;
   if (!o) return <p className="muted">불러오는 중입니다.</p>;
   const waiting = o.subs.some((s) => s.sub.status === 'awaiting_deposit' && !s.sub.depositReportedAt);
 

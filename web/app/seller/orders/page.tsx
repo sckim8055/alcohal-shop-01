@@ -1,11 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
-import { NeedLogin, Note, Stamp, useAction } from '@/components/Bits';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useCallback, useEffect, useState } from 'react';
+import { Note, Stamp, useAction } from '@/components/Bits';
+import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { when, won } from '@/lib/format';
-import type { Carrier, SellerOrder } from '@/lib/types';
+import type { Carrier, Paged, SellerOrder } from '@/lib/types';
 
 function Row({ o, carriers, reload }: { o: SellerOrder; carriers: Carrier[]; reload: () => void }) {
   const act = useAction();
@@ -70,32 +72,45 @@ function Row({ o, carriers, reload }: { o: SellerOrder; carriers: Carrier[]; rel
   );
 }
 
+const TABS: [string, string][] = [['', '전체'], ['awaiting_deposit', '입금 대기'], ['paid', '보낼 주문'], ['shipped', '배송 중'], ['delivered', '배송 완료'], ['completed', '구매 확정'], ['cancelled', '취소'], ['refunded', '환불']];
+
 function SellerOrders() {
-  const [list, setList] = useState<SellerOrder[] | null>(null);
+  const [status, setStatus] = useState(useSearchParams().get('status') ?? '');
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState<Paged<SellerOrder> | null>(null);
   const [carriers, setCarriers] = useState<Carrier[]>([]);
   const [denied, setDenied] = useState('');
   const load = useCallback(() => {
-    api<SellerOrder[]>('/seller/orders').then(setList).catch((e) => setDenied(e.message));
-  }, []);
+    api<Paged<SellerOrder>>(`/seller/orders?status=${status}&page=${page}`).then(setData).catch((e) => setDenied(e.message));
+  }, [status, page]);
+  useEffect(load, [load]);
   useEffect(() => {
-    load();
     api<Carrier[]>('/carriers').then(setCarriers).catch(() => setCarriers([]));
-  }, [load]);
+  }, []);
 
   if (denied) return <Note kind="error">{denied}</Note>;
-  if (!list) return <p className="muted">불러오는 중입니다.</p>;
-  if (list.length === 0) return <div className="sheet"><h3>아직 들어온 주문이 없습니다</h3></div>;
-  return <div className="stack">{list.map((o) => <Row key={o.sub.sub.id} o={o} carriers={carriers} reload={load} />)}</div>;
+  return (
+    <>
+      <div className="tabs" role="group" aria-label="주문 상태">
+        {TABS.map(([v, label]) => <button key={v} type="button" className="chip" aria-current={status === v} onClick={() => { setStatus(v); setPage(1); }}>{label}</button>)}
+      </div>
+      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+        <div className="sheet"><h3>해당하는 주문이 없습니다</h3></div>
+      ) : (
+        <div className="stack">
+          {data.items.map((o) => <Row key={o.sub.sub.id} o={o} carriers={carriers} reload={load} />)}
+          <Pager page={data.page} size={data.size} total={data.total} onPage={setPage} />
+        </div>
+      )}
+    </>
+  );
 }
 
 export default function SellerOrdersPage() {
   return (
     <>
-      <div className="spread title">
-        <div><h1>주문 처리</h1></div>
-        <Link className="btn plain" href="/seller">내 가게로</Link>
-      </div>
-      <NeedLogin><SellerOrders /></NeedLogin>
+      <div className="title"><h1>주문 처리</h1></div>
+      <Suspense fallback={null}><SellerOrders /></Suspense>
     </>
   );
 }

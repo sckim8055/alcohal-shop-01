@@ -38,7 +38,7 @@
 
 ## 시범 계정
 
-DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳, 상품 26개, 주문 7건, 청구서, 게시글 5개)가 들어간다.
+DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳, 상품 27개, 주문 7건, 청구서, 게시글 5개)가 들어간다.
 가게·상품·사람 이름, 사업자번호, 계좌는 모두 지어낸 것이다. 비밀번호는 전부 `test1234`.
 
 | 계정 | 역할 |
@@ -53,7 +53,9 @@ DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳,
 | `buyer2@test.local` | 구매자 (성인인증 전) |
 | `buyer3@test.local` | 구매자 (성인인증 완료, 주문 4건) |
 
-처음 상태로 되돌리려면 서버를 끄고 `server/data/` 폴더를 지운다.
+처음 상태로 되돌리려면 서버를 끄고 `server/data/` 폴더를 지운다(DB, 올린 사진·동영상, 로그인 세션이 모두 여기 있다).
+
+운영 화면은 `admin@test.local` 로 로그인한 뒤 위쪽 메뉴의 **운영**(`/admin`)이다.
 
 ## API
 
@@ -67,31 +69,40 @@ DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳,
 | 구분 | 주소 |
 | --- | --- |
 | 회원 | `GET /me`, `POST /auth/register`, `/auth/login`, `/auth/logout`, `/auth/verify-adult` |
-| 상품 | `GET /categories`, `/products?cat=&q=`, `/products/{id}`, `/carriers` |
+| 상품 | `GET /categories`, `/products?cat=&q=&sort=&page=`, `/products/{id}`, `/carriers` |
+| 내 정보 | `PUT /me`, `POST /me/password`, `GET /notifications`, `POST /notifications/read-all`, `/notifications/{id}/read` |
+| 파일 | `POST /files`(사진·동영상 올리기), `GET /files/{이름}` |
 | 장바구니 | `GET /cart`, `POST /cart/items`, `PUT /cart/items/{productId}` |
 | 주문 | `POST /orders`, `GET /orders`, `/orders/{id}`, `/orders/{id}/receipt/{subId}` |
 | 구매자 처리 | `POST /suborders/{id}/report`, `/cancel`, `/receive` |
-| 판매자 | `POST /seller/apply`, `GET /seller`, `PUT /seller/settings`, `GET·POST /seller/products`, `PUT /seller/products/{id}`, `GET /seller/orders` |
+| 판매자 | `POST /seller/apply`, `GET /seller`, `PUT /seller/settings`, `GET·POST /seller/products`, `PUT /seller/products/{id}`, `POST /seller/products/{id}/status`, `GET /seller/orders?status=&page=` |
 | 판매자 처리 | `POST /seller/suborders/{id}/confirm`, `/ship`, `/deliver`, `/refund` |
 | 운영자 | `GET /admin`, `POST /admin/sellers/{id}/status`, `/license`, `PUT /admin/commission/default`, `/admin/categories/{id}/commission`, `/admin/sellers/{id}/commission`, `POST /admin/invoices/generate`, `/admin/invoices/{id}/paid` |
+| 운영자 관리 | `GET /admin/summary`, `/admin/members`, `POST /admin/members/{id}/admin`, `/status`, `GET /admin/products`, `POST /admin/products/{id}/block`, `GET·POST /admin/categories`, `PUT /admin/categories/{id}`, `GET /admin/orders` |
 | 게시판 | `GET /posts`, `/posts/{id}`, `POST /posts` |
 
-업무 규칙은 `server/src/test/java/me/nexthub/sool/FlowTest.java` 의 테스트 이름을 읽으면 한눈에 볼 수 있다.
+목록은 `{items, page, size, total}` 모양으로 쪽을 나눠 돌려준다.
+
+업무 규칙은 `server/src/test/java/me/nexthub/sool/` 의 `FlowTest`(주문·입금·배송·수수료)와 `ManageTest`(회원·세션·알림·분류·상품) 테스트 이름을 읽으면 한눈에 볼 수 있다.
+
+앞으로 할 일과 빠진 것은 `docs/backlog.md` 에 적어 둔다.
 
 ## 화면 디자인
 
 막걸리 장터에서 가져온 모양이다: 초록·흰 줄무늬 천막, 노란 양은 주전자 색 간판, 골판지 가격표와 빨간 매직 글씨, 도장 모양 상태 표시.
 색과 글꼴은 `web/app/globals.css` 맨 위의 변수로 모아 두었다. 글꼴(도현, 고운돋움, 개구)은 패키지에 들어 있어 인터넷 없이도 나온다.
-상품 사진 기능은 아직 없어서 분류별 그림(`web/components/Art.tsx`)을 대신 쓴다.
+사진을 올리지 않은 상품은 분류별 그림(`web/components/Art.tsx`)을 대신 보여 준다.
+상품 설명은 편집기(Tiptap)로 쓰고 HTML 이 아닌 문서(JSON)로 저장한다. 화면은 허용한 요소만 골라 그리므로 스크립트가 섞여 들어와도 실행되지 않는다.
 
 ## 아직 시범용인 부분
 
-- 상품 사진 올리기가 없다.
+- 알림: 사이트 안 알림은 동작한다. 메일은 보낼 내용만 쌓이고 실제로 나가지 않는다. 문자·알림톡은 없다.
+- 올린 사진·동영상은 서버 디스크(`server/data/uploads`)에 둔다. 사진 크기를 줄이지 않고 원본을 그대로 보여 준다.
 
 - 성인인증: 입력한 생년월일만 본다. 법적 성인인증이 아니므로 실제 판매 전에 본인확인 서비스로 바꿔야 한다.
 - 배송 조회: 발송 후 약 2분이 지나면 배송 완료가 되는 가짜 데이터다.
-- 로그인: 세션을 서버 메모리에 둔다. 서버를 재시작하면 로그아웃되고, 서버를 여러 대로 늘리려면 세션 저장소가 필요하다.
-- 로그인 시도 횟수 제한, 비밀번호 찾기, 이메일 확인은 없다.
+- 로그인: 세션은 서버를 정상 종료하면 디스크에 남아 재시작 뒤에도 유지된다. 서버를 여러 대로 늘리려면 세션 저장소가 필요하다.
+- 비밀번호를 5번 틀리면 10분 잠긴다. 비밀번호 찾기와 이메일 확인은 없다.
 - MySQL에서는 아직 돌려 보지 않았다(H2의 MySQL 호환 모드로만 확인).
 
 ## 코딩 기준

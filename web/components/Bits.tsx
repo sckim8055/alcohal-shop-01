@@ -50,7 +50,7 @@ export function NeedLogin({ children }: { children: React.ReactNode }) {
       <div className="sheet narrow">
         <h2>로그인이 필요합니다</h2>
         <p>이 화면은 로그인한 뒤에 볼 수 있습니다.</p>
-        <Link className="btn" href="/login">로그인</Link>
+        <Link className="btn" href={'/login?next=' + encodeURIComponent(typeof window === 'undefined' ? '/' : window.location.pathname + window.location.search)}>로그인</Link>
       </div>
     );
   }
@@ -61,7 +61,7 @@ export function ProductCard({ p }: { p: Product }) {
   const onSale = p.currentPrice < p.price;
   return (
     <Link href={'/products/' + p.id} className="stall">
-      <span className="art"><Art category={p.categoryName} /></span>
+      <span className="art">{p.mainImage ? <img src={p.mainImage} alt="" loading="lazy" /> : <Art category={p.topCategoryName} />}</span>
       {p.alcohol && <span className="age" title="19세 이상만 살 수 있습니다">19</span>}
       {p.stock === 0 && <span className="soldout"><span className="stamp off">다 팔렸어요</span></span>}
       <span className="info">

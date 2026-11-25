@@ -35,7 +35,10 @@ export function Header() {
               <Link href="/cart" aria-current={cur('/cart')}>
                 장바구니{me!.cartCount > 0 && <span className="count">{me!.cartCount}</span>}
               </Link>
-              <Link href="/orders" aria-current={cur('/orders')}>주문내역</Link>
+              <Link href="/my/notifications" aria-current={cur('/my/notifications')}>
+                알림{me!.unreadCount > 0 && <span className="count">{me!.unreadCount}</span>}
+              </Link>
+              <Link href="/my/orders" aria-current={path.startsWith('/my') && !path.startsWith('/my/notifications') || path.startsWith('/orders') ? 'page' : undefined}>마이</Link>
               <Link href="/seller" aria-current={cur('/seller')}>{me!.seller ? '내 가게' : '입점 신청'}</Link>
               {user.role === 'admin' && <Link href="/admin" aria-current={cur('/admin')}>운영</Link>}
               <span className="hello">{user.name} 님</span>

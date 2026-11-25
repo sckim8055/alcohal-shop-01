@@ -192,3 +192,81 @@ td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: t
   .sheet { border: 0; padding: 0; }
   .receipt + .receipt { page-break-before: always; }
 }
+
+/* ---- 왼쪽 메뉴가 있는 화면(마이, 내 가게, 운영) ---- */
+.with-side { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 28px; align-items: start; }
+.side { background: var(--paper); border: var(--line); }
+.side-title { font-family: var(--display); font-size: 1.5rem; background: var(--bottle); color: #fff; padding: 12px 16px 9px; border-bottom: var(--line); }
+.side-group { padding: 12px 16px; border-bottom: 1.5px dashed #b9ab9d; }
+.side-group:last-child { border-bottom: 0; }
+.side-head { font-family: var(--display); font-size: 1.1rem; margin-bottom: 4px; }
+.side ul { list-style: none; margin: 0; padding: 0; }
+.side a { display: block; text-decoration: none; padding: 3px 0; font-size: 0.97rem; }
+.side a:hover { text-decoration: underline; }
+.side a[aria-current='page'] { font-weight: 700; color: var(--bottle); box-shadow: inset 3px 0 0 var(--kettle); padding-left: 9px; margin-left: -9px; }
+
+/* ---- 쪽 번호, 걸러 보기 ---- */
+.pager { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 22px; }
+.pg { font-family: var(--display); font-size: 1.05rem; min-width: 2.2em; text-align: center; text-decoration: none; padding: 4px 9px 2px; border: var(--line); background: var(--paper); color: inherit; cursor: pointer; }
+.pg[aria-current='page'] { background: var(--bottle); color: #fff; }
+.pg.off { opacity: 0.4; cursor: default; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.tabs .chip { cursor: pointer; font-size: 1rem; }
+.filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
+.filters input, .filters select { width: auto; padding: 5px 8px; }
+.subchips { display: flex; gap: 6px 14px; flex-wrap: wrap; margin: 2px 0 6px; font-size: 0.97rem; }
+.subchips a { text-decoration: none; border-bottom: 2px solid transparent; }
+.subchips a[aria-current='true'] { border-bottom-color: var(--marker); font-weight: 700; }
+
+/* ---- 상품 사진과 동영상 ---- */
+.stall .art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.detail .stage { display: grid; place-items: center; background: #000; }
+.detail .stage img { width: 100%; height: 100%; object-fit: contain; background: var(--paper); }
+.detail .stage video, .detail .stage iframe { width: 100%; height: 100%; border: 0; display: block; }
+.thumbs { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.thumbs button { width: 72px; height: 54px; padding: 0; border: var(--line); background: var(--paper); cursor: pointer; overflow: hidden; font: inherit; font-size: 0.8rem; }
+.thumbs button[aria-current='true'] { outline: 3px solid var(--kettle); outline-offset: 1px; }
+.thumbs img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.media-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+.media-list li { border: var(--line); background: var(--paper); padding: 8px; }
+.media-list .thumb { aspect-ratio: 4 / 3; background: #eee; margin-bottom: 6px; overflow: hidden; }
+.media-list .thumb img, .media-list .thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.specs { width: auto; }
+.specs th { border-bottom: 1.5px dashed #b9ab9d; font-family: var(--body); font-weight: 700; font-size: 1rem; padding-right: 24px; }
+
+/* ---- 꾸민 설명과 편집기 ---- */
+.rich { max-width: 44em; }
+.rich h2 { font-size: 1.6rem; margin: 1.2em 0 0.5em; }
+.rich h3 { font-size: 1.25rem; margin: 1.1em 0 0.4em; }
+.rich > :first-child { margin-top: 0; }
+.rich ul, .rich ol { padding-left: 1.4em; margin: 0 0 0.8em; }
+.rich blockquote { margin: 0 0 0.8em; padding: 6px 14px; border-left: 5px solid var(--kettle); background: var(--kettle-pale); }
+.rich blockquote p:last-child { margin-bottom: 0; }
+.rich hr { border: 0; border-top: 2px dashed var(--onggi); margin: 1.2em 0; }
+.rich img { display: block; max-width: 100%; height: auto; border: var(--line); margin: 0.8em 0; }
+.rich a { color: var(--tarp); }
+.editor { border: var(--line); background: var(--paper); }
+.toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: var(--line); background: var(--takju); }
+.tool { font: inherit; font-size: 0.92rem; padding: 3px 9px; border: 1.5px solid var(--onggi); background: var(--paper); cursor: pointer; }
+.tool[aria-pressed='true'] { background: var(--kettle); }
+.toolbar .sep { width: 1px; background: var(--onggi); opacity: 0.35; margin: 2px 4px; }
+.editor-area { min-height: 260px; padding: 14px 16px; outline: none; max-width: none; }
+.editor-area p.is-editor-empty:first-child::before { content: '상품을 소개하는 글을 써 주세요.'; color: var(--onggi-soft); float: left; height: 0; pointer-events: none; }
+
+/* ---- 알림, 요약 칸, 없는 화면 ---- */
+.notice-list { list-style: none; margin: 0; padding: 0; }
+.notice-list li { border-bottom: 1.5px dashed #b9ab9d; padding: 12px 4px; }
+.notice-list li.unread { background: var(--kettle-pale); box-shadow: inset 4px 0 0 var(--marker); padding-left: 14px; }
+.figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.figure { background: var(--paper); border: var(--line); padding: 12px 14px; text-decoration: none; display: block; }
+.figure b { display: block; font-family: var(--display); font-weight: 400; font-size: 2rem; line-height: 1.1; color: var(--marker); }
+.lost { text-align: center; padding: 30px 0 10px; }
+.lost .kettle { width: 200px; margin: 0 auto 10px; transform: rotate(14deg); }
+.lost p { max-width: 30em; margin: 12px auto 20px; }
+
+@media (max-width: 860px) {
+  .with-side { grid-template-columns: 1fr; }
+  .side-group ul { display: flex; flex-wrap: wrap; gap: 2px 16px; }
+}
+
+.nowrap { white-space: nowrap; }

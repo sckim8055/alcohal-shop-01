@@ -1,14 +1,18 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
 import { Note, useAction } from '@/components/Bits';
 import { useMe } from '@/components/Me';
 import { api } from '@/lib/api';
 
-export default function Login() {
+function LoginForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  // 로그인 뒤 돌아갈 곳. 이 사이트 안의 주소만 허용한다.
+  const raw = params.get('next') ?? '/';
+  const next = raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\') ? raw : '/';
   const { refresh } = useMe();
   const act = useAction();
   const [email, setEmail] = useState('');
@@ -19,13 +23,14 @@ export default function Login() {
     const ok = await act.run(() => api('/auth/login', { method: 'POST', body: { email, password } }));
     if (ok) {
       await refresh();
-      router.push('/');
+      router.push(next);
     }
   }
 
   return (
     <div className="narrow">
       <div className="title"><h1>로그인</h1></div>
+      {params.get('expired') && !act.error && <Note>로그인이 풀렸습니다. 다시 로그인해 주세요.</Note>}
       <Note kind="error">{act.error}</Note>
       <form className="sheet" onSubmit={submit}>
         <div className="field">
@@ -44,4 +49,8 @@ export default function Login() {
       </div>
     </div>
   );
+}
+
+export default function Login() {
+  return <Suspense fallback={null}><LoginForm /></Suspense>;
 }
