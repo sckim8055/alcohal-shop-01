@@ -17,6 +17,6 @@ class HealthControllerTest {
         var health = controller.health();
 
         assertEquals("ok", health.status());
-        assertEquals(4, health.categoryCount());
+        assertEquals(5, health.categoryCount());
     }
 }

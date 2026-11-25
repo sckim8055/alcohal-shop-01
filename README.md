@@ -9,6 +9,8 @@
 | `server/` | API 서버: JDK 25, Spring Boot 4, Gradle 9, H2(로컬) / MySQL(운영), Flyway |
 | `web/` | 화면: React(Next.js), 아직 없음 |
 
+서버 코드는 `auth`(회원·권한), `catalog`(상품), `order`(장바구니·주문·배송), `seller`, `admin`(운영·청구서), `board`, `sample`(시범 데이터), `common` 꾸러미로 나뉜다.
+
 ## 로컬 실행 (Windows, 휴대용)
 
 도구는 설치하지 않고 이 폴더의 상위 폴더(`F:\works`)에 압축을 풀어 둔 것을 쓴다.
@@ -29,6 +31,56 @@
 | `run.bat` | 서버 실행 → http://localhost:8080/api/health |
 
 로컬 DB 파일은 `server/data/`에 생기며, 지우면 초기 상태로 돌아간다.
+
+## 시범 계정
+
+DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳, 상품 26개, 주문 7건, 청구서, 게시글 5개)가 들어간다.
+가게·상품·사람 이름, 사업자번호, 계좌는 모두 지어낸 것이다. 비밀번호는 전부 `test1234`.
+
+| 계정 | 역할 |
+| --- | --- |
+| `admin@test.local` | 운영자 |
+| `brewery@test.local` | 판매자: 한울 양조장 (주류 면허 확인됨) |
+| `orchard@test.local` | 판매자: 달빛 과수원 양조 (주류 면허 확인됨) |
+| `cups@test.local` | 판매자: 도담 공방 |
+| `supplies@test.local` | 판매자: 누룩과 쌀 (수업 포함) |
+| `newseller@test.local` | 판매자: 새내기 가게 (입점 심사 중) |
+| `buyer@test.local` | 구매자 (성인인증 완료, 주문 3건) |
+| `buyer2@test.local` | 구매자 (성인인증 전) |
+| `buyer3@test.local` | 구매자 (성인인증 완료, 주문 4건) |
+
+처음 상태로 되돌리려면 서버를 끄고 `server/data/` 폴더를 지운다.
+
+## API
+
+화면(React)은 아직 없고, 지금은 API만 있다. 모든 주소는 `/api` 로 시작한다.
+
+- 화면을 열 때 `GET /api/me` 로 로그인 상태와 `csrfToken` 을 받는다.
+- 값을 바꾸는 요청(POST, PUT)은 `X-CSRF-Token` 머리말에 그 토큰을 넣어야 한다. 로그인하면 토큰이 바뀐다.
+- 오류는 `{"message": "안내 문구"}` 형식이며 상태 코드는 400(입력 오류), 401(로그인 필요), 403(권한 없음), 404(없음), 409(지금은 할 수 없음)이다.
+- 시각은 UTC이고 시간대 표시가 없다(예: `2026-11-25T02:59:56`). 금액은 원 단위 정수, 수수료율은 1만분율(`commissionRateBp` 100 = 1%)이다.
+
+| 구분 | 주소 |
+| --- | --- |
+| 회원 | `GET /me`, `POST /auth/register`, `/auth/login`, `/auth/logout`, `/auth/verify-adult` |
+| 상품 | `GET /categories`, `/products?cat=&q=`, `/products/{id}`, `/carriers` |
+| 장바구니 | `GET /cart`, `POST /cart/items`, `PUT /cart/items/{productId}` |
+| 주문 | `POST /orders`, `GET /orders`, `/orders/{id}`, `/orders/{id}/receipt/{subId}` |
+| 구매자 처리 | `POST /suborders/{id}/report`, `/cancel`, `/receive` |
+| 판매자 | `POST /seller/apply`, `GET /seller`, `PUT /seller/settings`, `GET·POST /seller/products`, `PUT /seller/products/{id}`, `GET /seller/orders` |
+| 판매자 처리 | `POST /seller/suborders/{id}/confirm`, `/ship`, `/deliver`, `/refund` |
+| 운영자 | `GET /admin`, `POST /admin/sellers/{id}/status`, `/license`, `PUT /admin/commission/default`, `/admin/categories/{id}/commission`, `/admin/sellers/{id}/commission`, `POST /admin/invoices/generate`, `/admin/invoices/{id}/paid` |
+| 게시판 | `GET /posts`, `/posts/{id}`, `POST /posts` |
+
+업무 규칙은 `server/src/test/java/me/nexthub/sool/FlowTest.java` 의 테스트 이름을 읽으면 한눈에 볼 수 있다.
+
+## 아직 시범용인 부분
+
+- 성인인증: 입력한 생년월일만 본다. 법적 성인인증이 아니므로 실제 판매 전에 본인확인 서비스로 바꿔야 한다.
+- 배송 조회: 발송 후 약 2분이 지나면 배송 완료가 되는 가짜 데이터다.
+- 로그인: 세션을 서버 메모리에 둔다. 서버를 재시작하면 로그아웃되고, 서버를 여러 대로 늘리려면 세션 저장소가 필요하다.
+- 로그인 시도 횟수 제한, 비밀번호 찾기, 이메일 확인은 없다.
+- MySQL에서는 아직 돌려 보지 않았다(H2의 MySQL 호환 모드로만 확인).
 
 ## 코딩 기준
 
