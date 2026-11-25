@@ -25,6 +25,8 @@ export type Product = {
   stock: number; status: ProductStatus; categoryName: string; topCategoryName: string; alcohol: boolean;
   abv: number | null; volumeMl: number | null; origin: string; mainImage: string | null;
   shopName: string; sellerStatus: string; sellerIntro: string; baseShipFee: number; freeShipMin: number | null;
+  /** 리뷰 수(보이는 것만)와 평균 별점(소수 한 자리, 없으면 null). 서버가 아직 보내지 않을 수 있다(docs/adr/0003 A). */
+  reviewCount?: number; ratingAvg?: number | null;
 };
 
 export type ProductStatus = 'draft' | 'on_sale' | 'paused' | 'ended' | 'blocked';
@@ -116,4 +118,42 @@ export type Address = { id: number; label: string; receiver: string; phone: stri
 export type AddressInput = Omit<Address, 'id'>;
 export type ReorderResult = { added: number; skipped: string[] };
 /** GET /seller 의 todo: 가게에서 지금 처리할 일 */
-export type SellerTodo = { claimsRequested: number; returnsApproved: number; soldOut: number; shipLate: number };
+export type SellerTodo = { claimsRequested: number; returnsApproved: number; soldOut: number; shipLate: number; inquiriesUnanswered?: number; reviewsUnanswered?: number };
+
+// ---- 리뷰, 문의, 공지, 가게 화면, 판매 통계 (docs/adr/0003-reviews-inquiries-notices-shop-stats.md) ----
+export type ReviewStatus = 'visible' | 'hidden' | 'deleted';
+export type Review = {
+  id: number; productId: number; productName: string; rating: number; body: string; images: string[];
+  authorName: string; mine: boolean; status: ReviewStatus; sellerReply: string | null; repliedAt: string | null; createdAt: string;
+};
+/** 아직 리뷰를 쓰지 않은 구매 확정 상품 한 줄 */
+export type Writable = { orderItemId: number; orderId: number; productId: number; productName: string; shopName: string; qty: number; completedAt: string };
+/** GET /products/{id}/reviews. counts 는 별 1개~5개 순서 */
+export type ReviewSummary = { ratingAvg: number | null; reviewCount: number; counts: number[]; page: Paged<Review> };
+
+export type InquiryKind = 'product' | 'order' | 'admin';
+export type Inquiry = {
+  id: number; target: 'seller' | 'admin'; kind: InquiryKind; productId: number | null; productName: string | null;
+  subOrderId: number | null; orderId: number | null; orderNo: string | null; shopName: string | null;
+  /** 남의 비밀글이면 title 은 "비밀글입니다", body·answer 는 null */
+  title: string; body: string | null; secret: boolean; authorName: string; mine: boolean;
+  status: 'open' | 'answered'; answer: string | null; answeredAt: string | null; createdAt: string;
+};
+/** POST /inquiries 본문 */
+export type InquiryInput = { target: 'seller' | 'admin'; productId: number | null; subOrderId: number | null; title: string; body: string; secret: boolean };
+
+export type NoticeAudience = 'all' | 'seller';
+export type Notice = { id: number; audience: NoticeAudience; title: string; body: string; pinned: boolean; createdAt: string };
+
+export type Shop = {
+  id: number; shopName: string; intro: string; ceoName: string; bizNo: string; mailOrderNo: string; csPhone: string;
+  productCount: number; reviewCount: number; ratingAvg: number | null;
+};
+export type ShopPage = { shop: Shop; products: Paged<Product> };
+
+export type SellerStats = {
+  days: number; from: string; to: string;
+  totals: { orders: number; sales: number; items: number };
+  daily: { date: string; orders: number; sales: number }[];
+  topProducts: { productId: number; name: string; qty: number; sales: number }[];
+};

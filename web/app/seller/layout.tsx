@@ -10,8 +10,9 @@ function Inner({ children }: { children: React.ReactNode }) {
   if (me?.seller?.status !== 'approved') return <>{children}</>;
   return (
     <WithSideMenu title="내 가게" groups={[
-      { title: '가게', items: [{ href: '/seller', label: '가게 현황' }, { href: '/seller/settings', label: '가게 설정' }] },
+      { title: '가게', items: [{ href: '/seller', label: '가게 현황' }, { href: '/seller/stats', label: '판매 통계' }, { href: '/seller/settings', label: '가게 설정' }, { href: '/seller/notices', label: '공지' }] },
       { title: '상품', items: [{ href: '/seller/products', label: '상품 관리' }, { href: '/seller/products/new', label: '상품 올리기' }, { href: '/seller/coupons', label: '쿠폰' }] },
+      { title: '고객', items: [{ href: '/seller/reviews', label: '리뷰' }, { href: '/seller/inquiries', label: '문의' }] },
       { title: '주문과 정산', items: [{ href: '/seller/orders', label: '주문 처리' }, { href: '/seller/claims', label: '취소·반품·교환' }, { href: '/seller/invoices', label: '수수료 청구서' }] },
     ]}>
       {children}

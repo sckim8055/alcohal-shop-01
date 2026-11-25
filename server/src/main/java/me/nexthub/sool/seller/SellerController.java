@@ -90,8 +90,10 @@ public class SellerController {
     /**
      * 처리할 일. claimsRequested: 답하지 않은 신청, returnsApproved: 승인한 뒤 끝내지 않은 반품·교환,
      * soldOut: 판매 중인데 재고 0, shipLate: 입금 확인 후 3일이 지나도록 보내지 않은 실물 주문.
+     * inquiriesUnanswered: 답하지 않은 상품·주문 문의, reviewsUnanswered: 답글 없는 보이는 리뷰.
      */
-    public record Todo(long claimsRequested, long returnsApproved, long soldOut, long shipLate) {
+    public record Todo(long claimsRequested, long returnsApproved, long soldOut, long shipLate,
+                       long inquiriesUnanswered, long reviewsUnanswered) {
     }
 
     public record Dashboard(Seller seller, List<StatusCount> orderCounts, List<StatusCount> productCounts,
@@ -178,7 +180,11 @@ public class SellerController {
                         SELECT COUNT(*) FROM sub_order
                          WHERE seller_id = :s AND status = 'paid' AND has_physical = TRUE AND deposit_confirmed_at < :limit
                         """).param("s", sellerId).param("limit", clock.now().minusDays(SHIP_LATE_DAYS))
-                        .query(Long.class).single());
+                        .query(Long.class).single(),
+                count("SELECT COUNT(*) FROM inquiry WHERE target = 'seller' AND seller_id = :s AND status = 'open'",
+                        sellerId),
+                count("SELECT COUNT(*) FROM review WHERE seller_id = :s AND status = 'visible' AND seller_reply IS NULL",
+                        sellerId));
     }
 
     private long count(String sql, long sellerId) {

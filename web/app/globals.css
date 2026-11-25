@@ -289,3 +289,49 @@ td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: t
   .ticket { grid-template-columns: 1fr; }
   .ticket-face { border-right: 0; border-bottom: 2px dashed var(--onggi); }
 }
+
+/* ---- 리뷰, 문의, 공지, 가게, 판매 통계 (docs/adr/0003) ---- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.stars { color: var(--marker); letter-spacing: 0.05em; white-space: nowrap; }
+.rate { display: block; }
+.rate a { text-decoration: none; }
+.rate a:hover .muted { text-decoration: underline; }
+.stall .rate { margin-top: 2px; }
+.review { border-bottom: 1.5px dashed #b9ab9d; padding: 14px 0; }
+.review:first-child { padding-top: 0; }
+.review .thumbs button { width: 84px; height: 84px; }
+.reply { margin-top: 10px; padding: 8px 14px; border-left: 5px solid var(--kettle); background: var(--kettle-pale); }
+.review-summary { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 28px; align-items: center; padding-bottom: 16px; margin-bottom: 14px; border-bottom: var(--line); }
+.review-summary .avg { font-family: var(--display); font-size: 3rem; line-height: 1; color: var(--marker); }
+.bars { list-style: none; margin: 0; padding: 0; max-width: 420px; }
+.bars li { display: grid; grid-template-columns: 2.6em minmax(0, 1fr) 3.4em; gap: 10px; align-items: center; font-size: 0.92rem; }
+.bars .bar { height: 12px; border: 1.5px solid var(--onggi); background: var(--paper); }
+.bars .bar span { display: block; height: 100%; background: var(--bottle); }
+.bars .num { text-align: right; font-variant-numeric: tabular-nums; }
+.star-pick { border: 0; margin: 0; padding: 0; }
+.star-pick legend { font-weight: 700; padding: 0; margin-bottom: 4px; }
+.star-pick label { display: inline-block; position: relative; margin: 0; font-size: 2rem; line-height: 1; color: var(--marker); cursor: pointer; padding: 0 2px; }
+.star-pick input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.star-pick label:has(input:focus-visible) { outline: 3px solid var(--tarp); outline-offset: 2px; }
+.lightbox { border: var(--line); box-shadow: var(--hard); padding: 12px; background: var(--paper); max-width: min(92vw, 900px); }
+.lightbox::backdrop { background: rgba(42, 27, 20, 0.7); }
+.lightbox img { display: block; max-width: 100%; max-height: 75vh; margin: 0 auto; }
+details > summary { cursor: pointer; }
+.band { display: flex; gap: 10px; align-items: baseline; text-decoration: none; border: var(--line); background: var(--kettle-pale); padding: 6px 14px; margin-bottom: 20px; overflow: hidden; }
+.band:hover .band-text { text-decoration: underline; }
+.band-label { font-family: var(--display); color: var(--marker); flex: none; }
+.band-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.shop-head { border-bottom: var(--line); padding: 10px 0 14px; }
+.chart { width: 100%; overflow: hidden; }
+.chart svg { display: block; }
+.chart .axis { font-family: var(--body); font-size: 12px; fill: var(--onggi-soft); }
+.chart .grid { stroke: #b9ab9d; stroke-width: 1; stroke-dasharray: 3 3; }
+.chart .base { stroke: var(--onggi); stroke-width: 2; }
+.chart .bar { fill: var(--bottle); }
+.chart .hit { fill: transparent; }
+.chart .col:hover .bar { fill: var(--bottle-deep); }
+.chart .col:hover .hit { fill: var(--kettle-pale); }
+@media (max-width: 560px) {
+  .review-summary { grid-template-columns: 1fr; gap: 12px; }
+}

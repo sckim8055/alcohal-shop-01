@@ -7,6 +7,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { NeedLogin, Note, Stamp, useAction } from '@/components/Bits';
 import { ClaimFacts, ClaimForm, ClaimStamp } from '@/components/Claims';
 import { CouponRow } from '@/components/CouponTicket';
+import { InquiryForm } from '@/components/Inquiries';
 import { useMe } from '@/components/Me';
 import { api } from '@/lib/api';
 import { CLAIM_TYPE_LABEL, claimOpen, when, won } from '@/lib/format';
@@ -78,6 +79,26 @@ function ClaimBox({ s, mine, reload }: { s: Sub; mine: boolean; reload: () => vo
         <ClaimForm subOrderId={s.sub.id} claimType={opening} onClose={() => setOpening(null)} onDone={() => { setOpening(null); reload(); }} />
       )}
     </div>
+  );
+}
+
+/** 판매자별 주문마다 "판매자에게 문의". 주문 문의는 늘 비밀글이다. */
+function AskSeller({ sub }: { sub: SubRow }) {
+  const [open, setOpen] = useState(false);
+  const [sent, setSent] = useState(false);
+  if (open) {
+    return (
+      <div style={{ marginTop: 12 }}>
+        <InquiryForm target="seller" subOrderId={sub.id} alwaysSecret heading={sub.shopName + '에 이 주문 문의하기'}
+          onCancel={() => setOpen(false)} onDone={() => { setOpen(false); setSent(true); }} />
+      </div>
+    );
+  }
+  return (
+    <>
+      {sent && <Note kind="ok">문의를 보냈습니다. 판매자가 답하면 알림과 메일로 알려 드립니다. <Link href="/my/inquiries">문의 내역 보기</Link></Note>}
+      <button className="btn plain small" type="button" onClick={() => { setOpen(true); setSent(false); }}>판매자에게 문의</button>
+    </>
   );
 }
 
@@ -190,6 +211,7 @@ function SubCard({ orderId, s, mine, reload }: { orderId: number; s: Sub; mine: 
       <ClaimBox s={s} mine={mine} reload={reload} />
       {sub.closeReason && <p className="muted">{sub.closeReason} ({when(sub.closedAt)})</p>}
       {sub.cashReceiptApproval && <p className="small">현금영수증 승인번호 {sub.cashReceiptApproval}</p>}
+      {mine && <div className="no-print" style={{ marginTop: 12 }}><AskSeller sub={sub} /></div>}
       <p className="right no-print" style={{ marginTop: 10 }}>
         <Link className="btn plain small" href={'/orders/' + orderId + '/receipt?sub=' + sub.id}>이 가게 영수증</Link>
       </p>

@@ -61,8 +61,8 @@ public class SampleData implements ApplicationRunner {
 
     /** 테스트 전용: 모든 업무 데이터를 지우고 설정을 처음 값으로 돌린다. */
     public void reset() {
-        // 외래 키 순서: 신청 → 판매자별 주문, 찜 → 상품, 배송지 → 회원
-        for (String table : List.of("order_claim", "wishlist", "member_address", "member_coupon", "coupon", "order_item", "sub_order", "shop_order", "cart_item", "commission_invoice",
+        // 외래 키 순서: 리뷰·문의 → 상품 줄·판매자별 주문, 공지 → 회원, 신청 → 판매자별 주문, 찜 → 상품, 배송지 → 회원
+        for (String table : List.of("review", "inquiry", "notice", "order_claim", "wishlist", "member_address", "member_coupon", "coupon", "order_item", "sub_order", "shop_order", "cart_item", "commission_invoice",
                 "commission_rate_log", "post", "product_media", "product", "seller", "upload_file",
                 "notification", "message_outbox", "member")) {
             db.sql("DELETE FROM " + table).update();
@@ -303,6 +303,32 @@ public class SampleData implements ApplicationRunner {
         wish(buyer, "옹기 술독 5L");
         wish(buyer, "막걸리 빚기 하루 수업");
 
+        // 10) 리뷰: 구매 확정된 buyer3 의 주문. 사과 와인 리뷰에는 판매자 답글.
+        //     알림이 쌓이지 않게 서비스 대신 바로 넣는다(시범 데이터는 이미 있었던 일처럼 보여야 한다).
+        review(regular, itemOf(o4sub, "달빛 사과 와인 375ml"), 5, "사과 향이 은은하고 달지 않아 식사와 잘 어울렸습니다.",
+                "맛있게 드셔 주셔서 고맙습니다. 올가을 사과로 빚은 술도 곧 나옵니다.");
+        review(regular, itemOf(o4sub, "달빛 오미자주 500ml"), 4, "새콤한 맛이 살아 있어요. 조금 더 차게 마시니 좋았습니다.", null);
+        review(regular, itemOf(o3sub, "막걸리 빚기 하루 수업"), 5, "처음인데도 차근차근 알려 주셔서 집에서도 빚을 수 있겠어요.", null);
+
+        // 11) 문의: 상품 문의 셋(공개 답변됨, 공개 미답변, 비밀 미답변), 운영자에게 1:1 문의 하나(미답변)
+        long buyer2 = memberId("buyer2@test.local");
+        inquiry(buyer, "seller", brew, productId("한울 생막걸리 750ml"), null, "받은 뒤 얼마나 두고 마실 수 있나요?",
+                "냉장고에 두면 며칠 안에 마셔야 하는지 궁금합니다.", false,
+                "제조일로부터 30일 안에 드시면 됩니다. 꼭 냉장 보관해 주세요.", sellerMemberId(brew));
+        inquiry(buyer2, "seller", supplies, productId("전통 누룩 1kg"), null, "누룩 1kg으로 몇 리터 빚나요?",
+                "쌀 몇 킬로그램과 함께 쓰면 되는지 알려 주세요.", false, null, null);
+        inquiry(buyer, "seller", supplies, productId("발효조 20L"), null, "에어락 따로 살 수 있나요?",
+                "에어락만 따로 주문할 수 있는지 궁금합니다. 연락처를 남깁니다.", true, null, null);
+        inquiry(regular, "admin", null, null, null, "현금영수증을 다시 받고 싶습니다",
+                "지난 주문의 현금영수증 번호를 바꿀 수 있는지 문의드립니다.", true, null, null);
+
+        // 12) 공지
+        long admin = memberId("admin@test.local");
+        notice(admin, "all", "술장터 시범 운영 안내",
+                "술장터는 지금 시범 운영 중입니다.\n대금은 판매자에게 직접 보내 주세요. 궁금한 점은 1:1 문의로 남겨 주세요.", true);
+        notice(admin, "seller", "수수료 청구 안내",
+                "매달 1일에 지난달 판매분 수수료 청구서가 발행됩니다.\n내 가게의 청구서에서 확인하고 기한 안에 보내 주세요.", false);
+
         invoices.generate(YearMonth.from(clock.today()).toString());
 
         post("supplies@test.local", "단양주 처음 빚어 본 기록",
@@ -315,6 +341,50 @@ public class SampleData implements ApplicationRunner {
                 "하루 수업에서 빚은 막걸리를 일주일 뒤에 걸렀습니다. 생각보다 어렵지 않았어요.");
         post("orchard@test.local", "올해 사과 수확 이야기",
                 "비가 적어 알은 작지만 당도가 높습니다. 올해 와인은 조금 더 진할 것 같습니다.");
+    }
+
+    private long sellerMemberId(long sellerId) {
+        return db.sql("SELECT member_id FROM seller WHERE id = :s").param("s", sellerId).query(Long.class).single();
+    }
+
+    private long itemOf(long subId, String name) {
+        return db.sql("SELECT id FROM order_item WHERE sub_order_id = :s AND name = :n")
+                .param("s", subId).param("n", name).query(Long.class).single();
+    }
+
+    private void review(long memberId, long orderItemId, int rating, String body, String reply) {
+        db.sql("""
+                INSERT INTO review (tenant_id, product_id, order_item_id, seller_id, member_id, rating, body, images,
+                                    status, seller_reply, replied_at, created_at)
+                SELECT :t, oi.product_id, oi.id, so.seller_id, :m, :rating, :body, '', 'visible', :reply, :repliedAt, :now
+                  FROM order_item oi JOIN sub_order so ON so.id = oi.sub_order_id WHERE oi.id = :i
+                """)
+                .param("t", tenant.id()).param("m", memberId).param("rating", rating).param("body", body)
+                .param("reply", reply).param("repliedAt", reply == null ? null : clock.now()).param("now", clock.now())
+                .param("i", orderItemId).update();
+    }
+
+    private void inquiry(long memberId, String target, Long sellerId, Long productId, Long subOrderId, String title,
+                         String body, boolean secret, String answer, Long answeredBy) {
+        db.sql("""
+                INSERT INTO inquiry (tenant_id, member_id, target, seller_id, product_id, sub_order_id, title, body,
+                                     secret, status, answer, answered_by, answered_at, created_at)
+                VALUES (:t, :m, :target, :s, :p, :so, :title, :body, :secret, :status, :answer, :by, :at, :now)
+                """)
+                .param("t", tenant.id()).param("m", memberId).param("target", target).param("s", sellerId)
+                .param("p", productId).param("so", subOrderId).param("title", title).param("body", body)
+                .param("secret", secret).param("status", answer == null ? "open" : "answered").param("answer", answer)
+                .param("by", answeredBy).param("at", answer == null ? null : clock.now()).param("now", clock.now())
+                .update();
+    }
+
+    private void notice(long adminId, String audience, String title, String body, boolean pinned) {
+        db.sql("""
+                INSERT INTO notice (tenant_id, audience, title, body, pinned, status, created_by, created_at)
+                VALUES (:t, :a, :title, :body, :pinned, 'published', :by, :now)
+                """)
+                .param("t", tenant.id()).param("a", audience).param("title", title).param("body", body)
+                .param("pinned", pinned).param("by", adminId).param("now", clock.now()).update();
     }
 
     /** 이름과 수량을 번갈아 받는다: order(buyer, "받는 분", "상품A", 2, "상품B", 1) */

@@ -5,7 +5,7 @@
 
 ## 구조
 
-- `server/` Java(Spring Boot 4.2, JDK 25 대상) API 서버. 꾸러미: `auth`, `catalog`, `order`, `seller`, `admin`, `board`, `notify`, `file`, `sample`, `common`
+- `server/` Java(Spring Boot 4.2, JDK 25 대상) API 서버. 꾸러미: `auth`, `catalog`, `order`, `seller`, `admin`, `board`, `notify`, `file`, `coupon`, `claim`, `member`, `review`, `inquiry`, `notice`, `sample`, `common`
 - `web/` Next.js 16 + React 19 + TypeScript. `/api` 요청은 Next.js 가 서버로 전달한다.
 - `docs/backlog.md` 할 일, `docs/adr/` 설계 결정
 
@@ -27,6 +27,7 @@
 
 - 디자인은 `web/app/globals.css` 의 변수와 기존 클래스(`sheet`, `btn`, `chip`, `tabs`, `stamp`, `note`, `figures`, `pager`, `with-side`)를 쓴다. 새 색·글꼴·둥근 카드·흐린 그림자를 들이지 않는다.
 - API 호출은 `lib/api.ts` 의 `api()`, 타입은 `lib/types.ts`, 금액·시각 표시는 `lib/format.ts`.
+- `page.tsx` 는 화면 하나만 내보낸다. 여러 화면이 같이 쓰는 부품은 `components/` 에 둔다.
 - 문구는 쉬운 한국어, 단추 이름은 누르면 일어나는 일 그대로. 빈 목록에는 다음에 할 일을 안내한다.
 - 사용자가 쓴 글을 `dangerouslySetInnerHTML` 로 넣지 않는다.
 - 메뉴가 필요한 화면은 `app/my`, `app/seller`, `app/admin` 의 `layout.tsx` 메뉴에 항목을 추가한다.

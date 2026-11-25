@@ -2,13 +2,14 @@ import Link from 'next/link';
 import { Kettle } from '@/components/Art';
 import { ProductCard } from '@/components/Bits';
 import { Pager } from '@/components/Pager';
+import { RecentViewed } from '@/components/Recent';
 import { categoryTree } from '@/lib/format';
 import { serverGet } from '@/lib/server';
-import type { Category, Paged, Product } from '@/lib/types';
+import type { Category, Notice, Paged, Product } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
 
-const SORTS = [['', '새로 나온 순'], ['price_asc', '값이 싼 순'], ['price_desc', '값이 비싼 순']] as const;
+const SORTS = [['', '새로 나온 순'], ['price_asc', '값이 싼 순'], ['price_desc', '값이 비싼 순'], ['rating', '평점 높은 순']] as const;
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ cat?: string; q?: string; sort?: string; page?: string }> }) {
   const { cat, q, sort, page } = await searchParams;
@@ -22,10 +23,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
   if (q) api.set('q', q);
   if (sort) api.set('sort', sort);
   if (page) api.set('page', page);
-  const [categories, products] = await Promise.all([
+  const [categories, products, notices] = await Promise.all([
     serverGet<Category[]>('/categories'),
     serverGet<Paged<Product>>('/products' + (api.size ? '?' + api : '')),
+    // 공지를 못 불러와도 첫 화면은 그대로 그린다(serverGet 은 실패하면 null).
+    serverGet<Paged<Notice>>('/notices'),
   ]);
+  const pinned = Array.isArray(notices?.items) ? notices.items.find((n) => n.pinned) : undefined;
 
   if (!categories || !products) {
     return (
@@ -42,6 +46,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
 
   return (
     <>
+      {pinned && (
+        <Link className="band" href={'/notices/' + pinned.id}>
+          <span className="band-label">공지</span> <span className="band-text">{pinned.title}</span>
+        </Link>
+      )}
       {!filtered && (
         <section className="hero">
           <div>
@@ -101,6 +110,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ c
           <Pager page={products.page} size={products.size} total={products.total} href={(p) => link({ page: p > 1 ? String(p) : undefined })} />
         </>
       )}
+      <RecentViewed />
     </>
   );
 }

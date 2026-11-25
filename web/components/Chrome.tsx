@@ -69,6 +69,7 @@ export function Footer() {
           상품과 배송, 환불의 책임은 각 판매자에게 있습니다.
         </p>
         <p>지금은 시범 운영 중이라 가게와 상품은 모두 예시입니다.</p>
+        <p><Link href="/notices">공지</Link> · <Link href="/my/inquiries">운영자에게 1:1 문의</Link></p>
       </div>
     </footer>
   );

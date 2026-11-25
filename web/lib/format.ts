@@ -1,4 +1,4 @@
-import type { Claim, ClaimStatus, ClaimType, Coupon, Invoice, ReasonCode, SubRow, SubStatus } from './types';
+import type { Claim, ClaimStatus, ClaimType, Coupon, InquiryKind, Invoice, ReasonCode, SubRow, SubStatus } from './types';
 
 export const won = (n: number) => n.toLocaleString('ko-KR') + '원';
 
@@ -96,3 +96,12 @@ export const REASON_LABEL: Record<ReasonCode, string> = {
 };
 /** 아직 끝나지 않은 신청(신청됨·승인됨)인지 */
 export const claimOpen = (c: Claim | null | undefined): c is Claim => !!c && (c.status === 'requested' || c.status === 'approved');
+
+// ---- 리뷰, 문의, 공지 ----
+export const INQUIRY_KIND_LABEL: Record<InquiryKind, string> = { product: '상품 문의', order: '주문 문의', admin: '1:1 문의' };
+export const INQUIRY_STATUS_LABEL: Record<'open' | 'answered', string> = { open: '답변 대기', answered: '답변 완료' };
+export const REVIEW_STATUS_LABEL: Record<string, string> = { visible: '보이는 중', hidden: '숨김', deleted: '지움' };
+export const AUDIENCE_LABEL: Record<string, string> = { all: '전체', seller: '판매자만' };
+
+/** 평균 별점을 '4.5' 처럼 소수 한 자리로 */
+export const rating1 = (n: number | null | undefined) => (n == null ? '' : (Math.round(n * 10) / 10).toFixed(1));

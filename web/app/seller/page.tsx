@@ -30,7 +30,7 @@ export default function SellerHome() {
   if (!d) return <p className="muted">불러오는 중입니다.</p>;
   const of = (list: Count[], st: string) => list.find((c) => c.status === st)?.count ?? 0;
   const unpaid = d.invoices.filter((i) => i.status === 'issued').length;
-  const todo = { claimsRequested: d.todo?.claimsRequested ?? 0, returnsApproved: d.todo?.returnsApproved ?? 0, soldOut: d.todo?.soldOut ?? 0, shipLate: d.todo?.shipLate ?? 0 };
+  const todo = { claimsRequested: d.todo?.claimsRequested ?? 0, returnsApproved: d.todo?.returnsApproved ?? 0, soldOut: d.todo?.soldOut ?? 0, shipLate: d.todo?.shipLate ?? 0, inquiriesUnanswered: d.todo?.inquiriesUnanswered ?? 0, reviewsUnanswered: d.todo?.reviewsUnanswered ?? 0 };
 
   return (
     <div className="stack">
@@ -44,6 +44,8 @@ export default function SellerHome() {
         <Link className="figure" href="/seller/claims?status=requested"><b>{todo.claimsRequested}</b>처리할 신청</Link>
         <Link className="figure" href="/seller/products?status=on_sale"><b>{todo.soldOut}</b>품절 상품</Link>
         <Link className="figure" href="/seller/orders?status=paid"><b>{todo.shipLate}</b>발송이 늦은 주문</Link>
+        <Link className="figure" href="/seller/inquiries"><b>{todo.inquiriesUnanswered}</b>답할 문의</Link>
+        <Link className="figure" href="/seller/reviews"><b>{todo.reviewsUnanswered}</b>답글 없는 리뷰</Link>
       </div>
       {todo.returnsApproved > 0 && <div className="note">승인한 반품·교환 {todo.returnsApproved}건이 마무리를 기다립니다. 물건을 돌려받았다면 <Link href="/seller/claims?status=approved">처리를 마쳐 주세요</Link>.</div>}
       {todo.shipLate > 0 && <div className="note">입금을 확인한 지 3일이 지났는데 아직 보내지 않은 주문이 {todo.shipLate}건 있습니다. <Link href="/seller/orders?status=paid">보낼 주문 보기</Link></div>}

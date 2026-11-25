@@ -54,7 +54,7 @@ public class AdminManageController {
     }
 
     public record Summary(long members, long pendingSellers, long productsOnSale, long awaitingDeposit,
-                          long toShip, long unpaidInvoices, long claimsOpen) {
+                          long toShip, long unpaidInvoices, long claimsOpen, long inquiriesUnanswered) {
     }
 
     private static final Map<String, Boolean> OK = Map.of("ok", true);
@@ -86,7 +86,9 @@ public class AdminManageController {
                 count("SELECT COUNT(*) FROM sub_order WHERE tenant_id = :t AND status = 'awaiting_deposit'"),
                 count("SELECT COUNT(*) FROM sub_order WHERE tenant_id = :t AND status = 'paid'"),
                 count("SELECT COUNT(*) FROM commission_invoice WHERE tenant_id = :t AND status = 'issued'"),
-                count("SELECT COUNT(*) FROM order_claim WHERE tenant_id = :t AND status IN ('requested', 'approved')"));
+                count("SELECT COUNT(*) FROM order_claim WHERE tenant_id = :t AND status IN ('requested', 'approved')"),
+                // 1:1 문의만 센다. 판매자에게 간 문의는 그 판매자의 할 일이다.
+                count("SELECT COUNT(*) FROM inquiry WHERE tenant_id = :t AND target = 'admin' AND status = 'open'"));
     }
 
     private long count(String sql) {

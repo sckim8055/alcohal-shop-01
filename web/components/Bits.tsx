@@ -6,6 +6,7 @@ import { ApiError } from '@/lib/api';
 import { STATUS_LABEL, won } from '@/lib/format';
 import type { Product, SubStatus } from '@/lib/types';
 import { Art } from './Art';
+import { Stars } from './Stars';
 import { useMe } from './Me';
 
 export function Stamp({ status }: { status: SubStatus }) {
@@ -67,6 +68,9 @@ export function ProductCard({ p }: { p: Product }) {
       <span className="info">
         <span className="name">{p.name}</span>
         <span className="shop">{p.shopName}</span>
+        {(p.reviewCount ?? 0) > 0 && p.ratingAvg != null && (
+          <span className="rate small"><Stars value={p.ratingAvg} /> {p.ratingAvg.toFixed(1)} <span className="muted">(리뷰 {p.reviewCount})</span></span>
+        )}
       </span>
       <span className="tag">
         {onSale && <s>{won(p.price)}</s>}

@@ -73,6 +73,8 @@ DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳,
 | 상품 | `GET /categories`, `/products?cat=&q=&sort=&page=`, `/products/{id}`, `/carriers` |
 | 내 정보 | `PUT /me`, `POST /me/password`, `GET /notifications`, `POST /notifications/read-all`, `/notifications/{id}/read` |
 | 파일 | `POST /files`(사진·동영상 올리기), `GET /files/{이름}` |
+| 신청·찜·배송지 | 취소·반품·교환, 찜, 배송지, 다시 담기, 탈퇴 (규격: `docs/adr/0002-claims-wishlist-address.md`) |
+| 리뷰·문의·공지 | 리뷰, 문의, 공지, 가게 화면, 판매 통계 (규격: `docs/adr/0003-reviews-inquiries-notices-shop-stats.md`) |
 | 쿠폰 | `GET /coupons`, `POST /coupons/{id}/claim`, `/coupons/redeem`, `GET /my/coupons`, `/checkout/coupons`, `GET·POST /seller/coupons`, `GET·POST /admin/coupons`, `POST /admin/coupons/{id}/grant` (규격: `docs/adr/0001-coupons.md`) |
 | 장바구니 | `GET /cart`, `POST /cart/items`, `PUT /cart/items/{productId}` |
 | 주문 | `POST /orders`, `GET /orders`, `/orders/{id}`, `/orders/{id}/receipt/{subId}` |
@@ -85,7 +87,7 @@ DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳,
 
 목록은 `{items, page, size, total}` 모양으로 쪽을 나눠 돌려준다.
 
-업무 규칙은 `server/src/test/java/me/nexthub/sool/` 의 `FlowTest`(주문·입금·배송·수수료)와 `ManageTest`(회원·세션·알림·분류·상품) 테스트 이름을 읽으면 한눈에 볼 수 있다.
+업무 규칙은 `server/src/test/java/me/nexthub/sool/` 의 테스트 이름을 읽으면 한눈에 볼 수 있다: `FlowTest`(주문·입금·배송·수수료), `ManageTest`(회원·세션·알림·분류·상품), `CouponTest`, `ClaimTest`, `MemberFeaturesTest`, `ReviewTest`, `InquiryTest`, `NoticeShopStatsTest`.
 
 앞으로 할 일과 빠진 것은 `docs/backlog.md` 에 적어 둔다.
 

@@ -1,0 +1,78 @@
+-- 리뷰, 문의, 공지(docs/adr/0003-reviews-inquiries-notices-shop-stats.md).
+
+-- 구매 확정된 상품 줄(order_item)마다 구매자가 한 번 쓰는 리뷰. 지워도 줄은 남겨(status = 'deleted') 다시 쓰지 못하게 한다.
+CREATE TABLE review (
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id     BIGINT        NOT NULL,
+    product_id    BIGINT        NOT NULL,
+    order_item_id BIGINT        NOT NULL,
+    seller_id     BIGINT        NOT NULL,
+    member_id     BIGINT        NOT NULL,
+    rating        INT           NOT NULL,
+    body          VARCHAR(1000) NOT NULL,
+    images        VARCHAR(400)  NOT NULL DEFAULT '',
+    status        VARCHAR(10)   NOT NULL DEFAULT 'visible',
+    seller_reply  VARCHAR(500),
+    replied_at    DATETIME(6),
+    created_at    DATETIME(6)   NOT NULL,
+    -- 같은 상품 줄에 리뷰 쓰기 요청이 동시에 두 번 와도 하나만 들어간다
+    CONSTRAINT uq_review_item UNIQUE (order_item_id),
+    CONSTRAINT fk_review_tenant FOREIGN KEY (tenant_id) REFERENCES tenant (id),
+    CONSTRAINT fk_review_product FOREIGN KEY (product_id) REFERENCES product (id),
+    CONSTRAINT fk_review_item FOREIGN KEY (order_item_id) REFERENCES order_item (id),
+    CONSTRAINT fk_review_seller FOREIGN KEY (seller_id) REFERENCES seller (id),
+    CONSTRAINT fk_review_member FOREIGN KEY (member_id) REFERENCES member (id),
+    CONSTRAINT ck_review_rating CHECK (rating >= 1 AND rating <= 5),
+    CONSTRAINT ck_review_status CHECK (status IN ('visible', 'hidden', 'deleted'))
+);
+CREATE INDEX idx_review_product ON review (product_id, status);
+CREATE INDEX idx_review_seller ON review (seller_id);
+CREATE INDEX idx_review_member ON review (member_id);
+
+-- 문의. target = 'seller' 이면 상품 문의(product_id) 또는 주문 문의(sub_order_id), 'admin' 이면 운영자에게 하는 1:1 문의.
+CREATE TABLE inquiry (
+    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id    BIGINT        NOT NULL,
+    member_id    BIGINT        NOT NULL,
+    target       VARCHAR(10)   NOT NULL,
+    seller_id    BIGINT,
+    product_id   BIGINT,
+    sub_order_id BIGINT,
+    title        VARCHAR(100)  NOT NULL,
+    body         VARCHAR(2000) NOT NULL,
+    secret       BOOLEAN       NOT NULL DEFAULT FALSE,
+    status       VARCHAR(10)   NOT NULL DEFAULT 'open',
+    answer       VARCHAR(2000),
+    answered_by  BIGINT,
+    answered_at  DATETIME(6),
+    created_at   DATETIME(6)   NOT NULL,
+    CONSTRAINT fk_inquiry_tenant FOREIGN KEY (tenant_id) REFERENCES tenant (id),
+    CONSTRAINT fk_inquiry_member FOREIGN KEY (member_id) REFERENCES member (id),
+    CONSTRAINT fk_inquiry_seller FOREIGN KEY (seller_id) REFERENCES seller (id),
+    CONSTRAINT fk_inquiry_product FOREIGN KEY (product_id) REFERENCES product (id),
+    CONSTRAINT fk_inquiry_sub FOREIGN KEY (sub_order_id) REFERENCES sub_order (id),
+    CONSTRAINT fk_inquiry_answered_by FOREIGN KEY (answered_by) REFERENCES member (id),
+    CONSTRAINT ck_inquiry_target CHECK (target IN ('seller', 'admin')),
+    CONSTRAINT ck_inquiry_status CHECK (status IN ('open', 'answered', 'deleted'))
+);
+CREATE INDEX idx_inquiry_product ON inquiry (product_id, status);
+CREATE INDEX idx_inquiry_seller ON inquiry (seller_id, status);
+CREATE INDEX idx_inquiry_member ON inquiry (member_id);
+CREATE INDEX idx_inquiry_target ON inquiry (tenant_id, target, status);
+
+CREATE TABLE notice (
+    id         BIGINT AUTO_INCREMENT PRIMARY KEY,
+    tenant_id  BIGINT        NOT NULL,
+    audience   VARCHAR(10)   NOT NULL,
+    title      VARCHAR(100)  NOT NULL,
+    body       VARCHAR(5000) NOT NULL,
+    pinned     BOOLEAN       NOT NULL DEFAULT FALSE,
+    status     VARCHAR(10)   NOT NULL DEFAULT 'published',
+    created_by BIGINT        NOT NULL,
+    created_at DATETIME(6)   NOT NULL,
+    CONSTRAINT fk_notice_tenant FOREIGN KEY (tenant_id) REFERENCES tenant (id),
+    CONSTRAINT fk_notice_member FOREIGN KEY (created_by) REFERENCES member (id),
+    CONSTRAINT ck_notice_audience CHECK (audience IN ('all', 'seller')),
+    CONSTRAINT ck_notice_status CHECK (status IN ('published', 'deleted'))
+);
+CREATE INDEX idx_notice_list ON notice (tenant_id, status, audience);

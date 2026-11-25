@@ -1,6 +1,10 @@
 package me.nexthub.sool.catalog;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 
 import me.nexthub.sool.common.AppClock;
 import me.nexthub.sool.common.Paged;
@@ -16,6 +20,7 @@ public class Catalog {
     /**
      * 상품 + 분류(중분류와 그 위 대분류) + 판매자. :today 값이 필요하다.
      * category_rate_bp 는 중분류에 값이 없으면 대분류 값을 쓴다.
+     * review_count, rating_avg 는 보이는(visible) 리뷰만 센다: 운영자가 숨긴 리뷰는 평점에서도 빠져야 하기 때문이다.
      */
     public static final String PRODUCT_SELECT = """
             SELECT p.id, p.seller_id, p.category_id, p.name, p.description, p.product_type,
@@ -27,6 +32,10 @@ public class Catalog {
                         THEN p.sale_price ELSE p.price END AS current_price,
                    (SELECT pm.url FROM product_media pm
                      WHERE pm.product_id = p.id AND pm.kind = 'image' ORDER BY pm.sort_order LIMIT 1) AS main_image,
+                   (SELECT COUNT(*) FROM review rv
+                     WHERE rv.product_id = p.id AND rv.status = 'visible') AS review_count,
+                   (SELECT ROUND(AVG(rv.rating * 1.0), 1) FROM review rv
+                     WHERE rv.product_id = p.id AND rv.status = 'visible') AS rating_avg,
                    c.name AS category_name, COALESCE(pc.name, c.name) AS top_category_name, c.is_alcohol AS alcohol,
                    COALESCE(c.commission_rate_bp, pc.commission_rate_bp) AS category_rate_bp,
                    s.shop_name, s.status AS seller_status, s.intro AS seller_intro,
@@ -67,7 +76,15 @@ public class Catalog {
 
     /** 판매 중인 상품 목록(승인된 판매자의 판매 중 상품만). 분류는 대분류를 주면 그 아래 중분류까지 포함한다. */
     public Paged<ProductView> list(Long categoryId, String keyword, String sort, int page, int size) {
+        return list(categoryId, keyword, sort, null, page, size);
+    }
+
+    /** sellerId 를 주면 그 가게 상품만(가게 화면). */
+    public Paged<ProductView> list(Long categoryId, String keyword, String sort, Long sellerId, int page, int size) {
         StringBuilder where = new StringBuilder(" WHERE p.tenant_id = :t AND p.status = 'on_sale' AND s.status = 'approved'");
+        if (sellerId != null) {
+            where.append(" AND p.seller_id = :seller");
+        }
         if (categoryId != null) {
             where.append(" AND (p.category_id = :cat OR c.parent_id = :cat)");
         }
@@ -79,6 +96,8 @@ public class Catalog {
         String order = switch (sort == null ? "" : sort) {
             case "price_asc" -> " ORDER BY current_price ASC, p.id DESC";
             case "price_desc" -> " ORDER BY current_price DESC, p.id DESC";
+            // 리뷰가 없으면 rating_avg 가 NULL 이다. MySQL 과 H2(MySQL 모드) 모두 내림차순에서 NULL 을 맨 뒤에 둔다.
+            case "rating" -> " ORDER BY rating_avg DESC, review_count DESC, p.id DESC";
             default -> " ORDER BY p.id DESC";
         };
         String from = " FROM product p JOIN category c ON c.id = p.category_id JOIN seller s ON s.id = p.seller_id";
@@ -94,7 +113,36 @@ public class Catalog {
             count = count.param("q", k);
             query = query.param("q", k);
         }
+        if (sellerId != null) {
+            count = count.param("seller", sellerId);
+            query = query.param("seller", sellerId);
+        }
         return new Paged<>(query.query(ProductView.class).list(), page, size, count.query(Long.class).single());
+    }
+
+    /**
+     * 최근 본 상품처럼 번호로 여러 상품을 한 번에 읽는다. 판매 중인 것만, 준 순서대로(같은 번호는 한 번만).
+     */
+    public List<ProductView> byIds(List<Long> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        List<ProductView> found = db.sql(PRODUCT_SELECT
+                        + " WHERE p.tenant_id = :t AND p.id IN (:ids) AND p.status = 'on_sale' AND s.status = 'approved'")
+                .param("t", tenant.id()).param("today", clock.today()).param("ids", ids)
+                .query(ProductView.class).list();
+        Map<Long, ProductView> byId = new HashMap<>();
+        for (ProductView p : found) {
+            byId.put(p.id(), p);
+        }
+        List<ProductView> result = new ArrayList<>();
+        for (Long id : new LinkedHashSet<>(ids)) {
+            ProductView p = byId.get(id);
+            if (p != null) {
+                result.add(p);
+            }
+        }
+        return result;
     }
 
     /** 판매 상태와 상관없이 상품 하나를 읽는다. 없으면 null */
