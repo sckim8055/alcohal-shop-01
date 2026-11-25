@@ -90,14 +90,14 @@ public class Catalog {
         }
         String k = keyword == null ? "" : keyword.trim();
         if (!k.isEmpty()) {
-            where.append(" AND p.name LIKE :q ESCAPE '!'");
+            where.append(" AND p.name ILIKE :q ESCAPE '!'");
             k = "%" + (k.length() > 50 ? k.substring(0, 50) : k).replaceAll("([!%_])", "!$1") + "%";
         }
         String order = switch (sort == null ? "" : sort) {
             case "price_asc" -> " ORDER BY current_price ASC, p.id DESC";
             case "price_desc" -> " ORDER BY current_price DESC, p.id DESC";
-            // 리뷰가 없으면 rating_avg 가 NULL 이다. MySQL 과 H2(MySQL 모드) 모두 내림차순에서 NULL 을 맨 뒤에 둔다.
-            case "rating" -> " ORDER BY rating_avg DESC, review_count DESC, p.id DESC";
+            // 리뷰가 없으면 rating_avg 가 NULL 이다. PostgreSQL 은 내림차순에서 NULL 을 맨 앞에 두므로 뒤로 보낸다.
+            case "rating" -> " ORDER BY rating_avg DESC NULLS LAST, review_count DESC, p.id DESC";
             default -> " ORDER BY p.id DESC";
         };
         String from = " FROM product p JOIN category c ON c.id = p.category_id JOIN seller s ON s.id = p.seller_id";

@@ -230,7 +230,7 @@ public class SellerController {
         String st = status == null || status.isBlank() ? null : status;
         String keyword = q == null || q.isBlank() ? null : "%" + Text.clean(q, 50).replaceAll("([!%_])", "!$1") + "%";
         String where = " WHERE p.seller_id = :s" + (st == null ? "" : " AND p.status = :st")
-                + (keyword == null ? "" : " AND p.name LIKE :q ESCAPE '!'");
+                + (keyword == null ? "" : " AND p.name ILIKE :q ESCAPE '!'");
         int pageNo = Paged.page(page);
         int size = 20;
         var count = db.sql("SELECT COUNT(*) FROM product p" + where).param("s", seller.id());

@@ -11,6 +11,8 @@ if not exist "%NODE_HOME%\node.exe" (echo [ERROR] Node.js not found: %NODE_HOME%
 set "PATH=%JAVA_HOME%\bin;%GRADLE_HOME%\bin;%NODE_HOME%;%PATH%"
 rem Video compression: optional. Extract ffmpeg to F:\works\ffmpeg so that ffmpeg\bin\ffmpeg.exe exists.
 if exist "%WORKS%\ffmpeg\bin\ffmpeg.exe" set "PATH=%WORKS%\ffmpeg\bin;%PATH%"
+rem Database password and address: db.local.bat (copy db.local.bat.example).
+if exist "%~dp0db.local.bat" call "%~dp0db.local.bat"
 rem Show Korean text correctly in this console.
 chcp 65001 >nul
 set "GRADLE_OPTS=-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8"

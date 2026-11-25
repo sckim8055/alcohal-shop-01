@@ -6,7 +6,7 @@
 
 | 폴더 | 내용 |
 | --- | --- |
-| `server/` | API 서버: JDK 25, Spring Boot 4, Gradle 9, H2(로컬) / MySQL(운영), Flyway |
+| `server/` | API 서버: JDK 25, Spring Boot 4, Gradle 9, PostgreSQL 16, Flyway |
 | `web/` | 화면: React 19 + Next.js 16 (TypeScript). `/api` 요청은 Next.js가 서버로 전달한다 |
 
 서버 코드는 `auth`(회원·권한), `catalog`(상품), `order`(장바구니·주문·배송), `seller`, `admin`(운영·청구서), `board`, `sample`(시범 데이터), `common` 꾸러미로 나뉜다.
@@ -35,7 +35,22 @@
 
 사이트를 보려면 `run.bat`과 `web.bat`을 둘 다 켜 두고 http://localhost:3000 을 연다.
 
-로컬 DB 파일은 `server/data/`에 생기며, 지우면 초기 상태로 돌아간다.
+DB는 PostgreSQL 16(`localhost:5433`)을 쓴다. 준비 방법은 아래 "DB 준비"를 본다.
+
+## DB 준비 (한 번만)
+
+PostgreSQL 16 서버가 `localhost:5433`에 떠 있어야 한다(재고관리 프로젝트와 같은 서버를 쓰되 DB와 계정은 따로 둔다).
+
+1. DB와 계정 만들기: `db-create.bat` (끝에 `sool` 계정 암호를 정한다). `..\tools\pgsql16\bin\psql.exe`를 쓰고, 관리자 계정이 `postgres`가 아니면 `db-create.bat 계정이름`으로 실행한다
+2. `db.local.bat.example`을 `db.local.bat`으로 복사하고 `SOOL_DB_PASSWORD=` 뒤에 그 암호를 적는다. 이 파일은 GitHub에 올라가지 않는다.
+3. `test.bat`으로 확인한다. 표는 서버나 테스트를 처음 돌릴 때 자동으로 만들어진다.
+
+| DB | 쓰는 곳 |
+| --- | --- |
+| `sool` | `run.bat`으로 켠 서버 |
+| `sool_test` | `test.bat`. 돌릴 때마다 자료를 지우고 다시 넣는다 |
+
+주소나 계정이 다르면 `db.local.bat`에서 `SOOL_DB_URL`, `SOOL_TEST_DB_URL`, `SOOL_DB_USER`를 바꾼다.
 
 ## 시범 계정
 
@@ -54,7 +69,7 @@ DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳,
 | `buyer2@test.local` | 구매자 (성인인증 전) |
 | `buyer3@test.local` | 구매자 (성인인증 완료, 주문 4건) |
 
-처음 상태로 되돌리려면 서버를 끄고 `server/data/` 폴더를 지운다(DB, 올린 사진·동영상, 로그인 세션이 모두 여기 있다).
+처음 상태로 되돌리려면 서버를 끄고 `db\reset-db.sql`을 실행한 뒤 `server/data/` 폴더를 지운다(올린 사진·동영상과 로그인 세션이 여기 있다).
 
 운영 화면은 `admin@test.local` 로 로그인한 뒤 위쪽 메뉴의 **운영**(`/admin`)이다.
 
@@ -108,7 +123,7 @@ DB가 비어 있으면 서버를 처음 켤 때 시범 데이터(판매자 5곳,
 - 배송 조회: 발송 후 약 2분이 지나면 배송 완료가 되는 가짜 데이터다.
 - 로그인: 세션은 서버를 정상 종료하면 디스크에 남아 재시작 뒤에도 유지된다. 서버를 여러 대로 늘리려면 세션 저장소가 필요하다.
 - 비밀번호를 5번 틀리면 10분 잠긴다. 비밀번호 찾기와 이메일 확인은 없다.
-- MySQL에서는 아직 돌려 보지 않았다(H2의 MySQL 호환 모드로만 확인).
+- DB는 PostgreSQL 16 하나만 지원한다. H2와 MySQL용 문법은 더 이상 맞추지 않는다.
 
 ## 코딩 기준
 

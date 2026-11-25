@@ -331,7 +331,7 @@ public class CouponService {
         if (is != null && !Text.in(is, List.of("platform", "seller"))) {
             throw ApiException.bad("발행자 값이 올바르지 않습니다.");
         }
-        String where = " WHERE cp.tenant_id = :t AND (:is IS NULL OR cp.issuer = :is)";
+        String where = " WHERE cp.tenant_id = :t AND (CAST(:is AS VARCHAR) IS NULL OR cp.issuer = :is)";
         long total = db.sql("SELECT COUNT(*) FROM coupon cp" + where).param("t", tenant.id()).param("is", is)
                 .query(Long.class).single();
         List<Coupon> items = db.sql(COUPON_SELECT + where + " ORDER BY cp.id DESC LIMIT :limit OFFSET :offset")

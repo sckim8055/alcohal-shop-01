@@ -109,7 +109,7 @@ public class AdminManageController {
         boolean byRole = Text.in(role, List.of("buyer", "seller", "admin"));
         boolean byStatus = Text.in(status, List.of("active", "suspended", "withdrawn"));
         if (keyword != null) {
-            where.append(" AND (m.email LIKE :q ESCAPE '!' OR m.name LIKE :q ESCAPE '!')");
+            where.append(" AND (m.email ILIKE :q ESCAPE '!' OR m.name ILIKE :q ESCAPE '!')");
         }
         if (byRole) {
             where.append(" AND m.role = :role");
@@ -191,7 +191,7 @@ public class AdminManageController {
         String keyword = q == null || q.isBlank() ? null : "%" + Text.clean(q, 50).replaceAll("([!%_])", "!$1") + "%";
         boolean byStatus = Text.in(status, List.of("draft", "on_sale", "paused", "ended", "blocked"));
         String where = " WHERE p.tenant_id = :t" + (byStatus ? " AND p.status = :st" : "")
-                + (keyword == null ? "" : " AND p.name LIKE :q ESCAPE '!'");
+                + (keyword == null ? "" : " AND p.name ILIKE :q ESCAPE '!'");
         int pageNo = Paged.page(page);
         int size = 20;
         var count = db.sql("SELECT COUNT(*) FROM product p" + where).param("t", tenant.id());

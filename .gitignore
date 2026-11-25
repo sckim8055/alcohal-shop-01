@@ -1,6 +1,7 @@
 build/
 .gradle/
 data/
+db.local.bat
 node_modules/
 .next/
 *.log

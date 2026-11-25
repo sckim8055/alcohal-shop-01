@@ -24,7 +24,9 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-flyway'
-    runtimeOnly 'com.h2database:h2'
+    // DB 는 PostgreSQL 16. Flyway 는 DB 종류별 모듈이 따로 있어야 PostgreSQL 을 알아본다.
+    runtimeOnly 'org.postgresql:postgresql'
+    runtimeOnly 'org.flywaydb:flyway-database-postgresql'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'

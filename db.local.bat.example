@@ -1,0 +1,8 @@
+@echo off
+rem Copy this file to db.local.bat and type the password of the "sool" database account.
+rem db.local.bat is not uploaded to GitHub (.gitignore).
+set "SOOL_DB_PASSWORD="
+rem Change these only when the database is somewhere else.
+rem set "SOOL_DB_URL=jdbc:postgresql://localhost:5433/sool"
+rem set "SOOL_TEST_DB_URL=jdbc:postgresql://localhost:5433/sool_test"
+rem set "SOOL_DB_USER=sool"

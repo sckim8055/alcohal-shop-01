@@ -689,7 +689,7 @@ public class OrderService {
 
     /** from(포함)부터 to(제외)까지 주문한 것. 둘 다 null 이면 전체 기간. */
     public Paged<OrderDetail> listForBuyer(long buyerId, LocalDateTime from, LocalDateTime to, int page, int size) {
-        String where = " WHERE buyer_id = :b AND (:from IS NULL OR created_at >= :from) AND (:to IS NULL OR created_at < :to)";
+        String where = " WHERE buyer_id = :b AND (CAST(:from AS TIMESTAMP) IS NULL OR created_at >= :from) AND (CAST(:to AS TIMESTAMP) IS NULL OR created_at < :to)";
         long total = db.sql("SELECT COUNT(*) FROM shop_order" + where)
                 .param("b", buyerId).param("from", from).param("to", to).query(Long.class).single();
         List<OrderDetail> result = new ArrayList<>();
@@ -726,7 +726,7 @@ public class OrderService {
 
     /** status 가 null 이면 모든 상태 */
     public Paged<SellerOrder> listForSeller(long sellerId, String status, int page, int size) {
-        String where = " WHERE so.seller_id = :s AND (:st IS NULL OR so.status = :st)";
+        String where = " WHERE so.seller_id = :s AND (CAST(:st AS VARCHAR) IS NULL OR so.status = :st)";
         long total = db.sql("SELECT COUNT(*) FROM sub_order so" + where)
                 .param("s", sellerId).param("st", status).query(Long.class).single();
         List<SellerOrder> result = new ArrayList<>();
