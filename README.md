@@ -31,9 +31,9 @@
 | `check.bat` | 도구 버전 확인 |
 | `test.bat` | 자동 테스트 실행 (첫 실행 때 라이브러리를 내려받음) |
 | `run.bat` | API 서버 실행 → http://localhost:8080/api/health |
-| `web.bat` | 화면 실행 → http://localhost:3000 (첫 실행 때 패키지를 내려받음) |
+| `web.bat` | 화면 실행 → http://localhost:3105 (첫 실행 때 패키지를 내려받음) |
 
-사이트를 보려면 `run.bat`과 `web.bat`을 둘 다 켜 두고 http://localhost:3000 을 연다.
+사이트를 보려면 `run.bat`과 `web.bat`을 둘 다 켜 두고 http://localhost:3105 을 연다.
 
 DB는 PostgreSQL 16(`localhost:5433`)을 쓴다. 준비 방법은 아래 "DB 준비"를 본다.
 

@@ -4,6 +4,8 @@ const API_BASE = process.env.API_BASE || 'http://localhost:8080';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // 개발 모드(next dev)를 Cloudflare 터널 주소로 열 때 필요. 없으면 Next 16 이 외부 주소의 개발용 요청을 막아 화면 스크립트가 멈춘다.
+  allowedDevOrigins: ['sool.kimbbob.xyz'],
   experimental: {
     // 동영상(100MB)을 서버로 전달할 수 있게 한다. 기본값은 10MB 라서 그보다 큰 파일은 올라가지 않는다.
     proxyClientMaxBodySize: '110mb',
