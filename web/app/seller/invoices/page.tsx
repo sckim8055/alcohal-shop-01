@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { invoiceNet, when, won } from '@/lib/format';
 import type { SellerDashboard } from '../page';
+import { Loading } from '@/components/Loading';
 
 export default function SellerInvoices() {
   const [d, setD] = useState<SellerDashboard | null>(null);
@@ -13,7 +14,7 @@ export default function SellerInvoices() {
   return (
     <>
       <div className="title"><h1>수수료 청구서</h1></div>
-      {!d ? <p className="muted">불러오는 중입니다.</p> : d.invoices.length === 0 ? (
+      {!d ? <Loading kind="table" /> : d.invoices.length === 0 ? (
         <div className="sheet"><h3>아직 청구서가 없습니다</h3><p>운영자가 매달 청구서를 만들면 여기에 나타납니다.</p></div>
       ) : (
         <div className="sheet scroll">

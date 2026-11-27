@@ -7,6 +7,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { COUPON_STATUS_LABEL, ISSUE_TYPE_LABEL, categoryTree, couponHeadline, day, todayKr, won } from '@/lib/format';
 import type { Category, Coupon, CouponInput, CouponStatus, DiscountType, IssueType, Paged } from '@/lib/types';
+import { Loading } from './Loading';
 
 // 판매자(/seller/coupons)와 운영자(/admin/coupons) 쿠폰 화면이 같이 쓰는 목록과 만들기 양식.
 
@@ -73,7 +74,7 @@ export function CouponList({ mode, reloadKey }: { mode: Mode; reloadKey: number 
       )}
       <Note kind="error">{act.error || failed}</Note>
       <Note kind="ok">{act.done}</Note>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading kind="table" /> : data.items.length === 0 ? (
         !failed && <div className="sheet"><h3>{admin && issuer ? '해당하는 쿠폰이 없습니다' : '아직 만든 쿠폰이 없습니다'}</h3><p>아래 양식에서 {admin ? '플랫폼 쿠폰을' : '첫 쿠폰을'} 만들어 보세요.</p><a className="btn" href="#new-coupon">쿠폰 만들러 가기</a></div>
       ) : (
         <div className="sheet scroll">

@@ -31,6 +31,7 @@
 - `page.tsx` 는 화면 하나만 내보낸다. 여러 화면이 같이 쓰는 부품은 `components/` 에 둔다.
 - 문구는 쉬운 한국어, 단추 이름은 누르면 일어나는 일 그대로. 빈 목록에는 다음에 할 일을 안내한다.
 - 사용자가 쓴 글을 `dangerouslySetInnerHTML` 로 넣지 않는다.
+- 자료를 불러오는 동안에는 글자 대신 `components/Loading.tsx` 의 `<Loading kind="list|stalls|table|detail" />` 로 들어올 내용 모양의 빈 자리를 보여 준다. 서버에서 그리는 화면은 그 폴더에 `loading.tsx` 를 둔다. 화면 이동 막대(`NavProgress`)는 화면에 `.loading` 이 남아 있는 동안 끝나지 않는다.
 - 메뉴가 필요한 화면은 `app/my`, `app/seller`, `app/admin` 의 `layout.tsx` 메뉴에 항목을 추가한다.
 
 ## 빌드와 테스트 (이 작업 환경)

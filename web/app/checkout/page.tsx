@@ -8,6 +8,7 @@ import { useMe } from '@/components/Me';
 import { api } from '@/lib/api';
 import { won } from '@/lib/format';
 import type { Address, Cart, CheckoutCouponGroup, CheckoutCouponOption, OrderDetail } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 const optionOff = (o: CheckoutCouponOption) => (o.discount ?? 0) + (o.shipDiscount ?? 0);
 const optionLabel = (o: CheckoutCouponOption) => `${o.name}: ${o.shipDiscount > 0 ? '배송비 ' : ''}${won(optionOff(o))} 할인`;
@@ -56,7 +57,7 @@ function Checkout() {
       .catch(() => setAddresses([]));
   }, []);
 
-  if (!cart) return <p className="muted">불러오는 중입니다.</p>;
+  if (!cart) return <Loading kind="table" />;
   if (cart.groups.length === 0) {
     return <div className="sheet"><h3>주문할 상품이 없습니다</h3><Link className="btn" href="/">장 보러 가기</Link></div>;
   }

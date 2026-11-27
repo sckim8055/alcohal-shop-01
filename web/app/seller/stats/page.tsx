@@ -7,6 +7,7 @@ import { SalesChart } from '@/components/SalesChart';
 import { api } from '@/lib/api';
 import { day, won } from '@/lib/format';
 import type { SellerStats } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 const PERIODS = [7, 30, 90] as const;
 
@@ -31,7 +32,7 @@ export default function SellerStatsPage() {
         {PERIODS.map((p) => <button key={p} type="button" className="chip" aria-current={days === p} onClick={() => setDays(p)}>최근 {p}일</button>)}
       </div>
       <Note kind="error">{failed}</Note>
-      {!s ? (!failed && <p className="muted">불러오는 중입니다.</p>) : (
+      {!s ? (!failed && <Loading kind="table" />) : (
         <div className="stack">
           <p className="muted small" style={{ margin: 0 }}>{day(s.from)}부터 {day(s.to)}까지, 입금을 확인한 날 기준. 취소·환불된 주문은 빼고, 매출은 상품 금액만 더했습니다(배송비·쿠폰 할인 제외).</p>
           <div className="figures">

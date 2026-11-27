@@ -7,6 +7,7 @@ import { useMe } from '@/components/Me';
 import { api } from '@/lib/api';
 import { AUDIENCE_LABEL, when } from '@/lib/format';
 import type { Notice } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 // 판매자 대상 공지는 로그인한 판매자에게만 보이므로 브라우저에서(로그인 정보를 실어) 불러온다.
 export default function NoticePage() {
@@ -31,7 +32,7 @@ export default function NoticePage() {
       </div>
     );
   }
-  if (!n) return <p className="muted">불러오는 중입니다.</p>;
+  if (!n) return <Loading />;
   return (
     <article className="sheet" style={{ maxWidth: 760 }}>
       <div className="row" style={{ gap: 8, marginBottom: 6 }}>

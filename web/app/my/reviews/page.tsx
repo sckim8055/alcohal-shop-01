@@ -8,6 +8,7 @@ import { ReviewForm, ReviewItem } from '@/components/Reviews';
 import { api } from '@/lib/api';
 import { when } from '@/lib/format';
 import type { Paged, Review, Writable } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 /** 쓸 수 있는 리뷰: 구매 확정한 상품마다 "리뷰 쓰기" */
 function WritableList({ onWritten }: { onWritten: () => void }) {
@@ -25,7 +26,7 @@ function WritableList({ onWritten }: { onWritten: () => void }) {
     <>
       <Note kind="error">{failed}</Note>
       <Note kind="ok">{message}</Note>
-      {!list ? <p className="muted">불러오는 중입니다.</p> : list.length === 0 ? (
+      {!list ? <Loading /> : list.length === 0 ? (
         <div className="sheet">
           <h3>지금 쓸 수 있는 리뷰가 없습니다</h3>
           <p>물건을 받고 주문 상세에서 “잘 받았어요”를 눌러 구매를 확정하면, 90일 안에 여기서 리뷰를 쓸 수 있습니다.</p>
@@ -77,7 +78,7 @@ function MineList({ stamp }: { stamp: number }) {
     <>
       <Note kind="error">{act.error}</Note>
       <Note kind="ok">{act.done}</Note>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet">
           <h3>아직 쓴 리뷰가 없습니다</h3>
           <p>“쓸 수 있는 리뷰” 탭에서 구매 확정한 상품의 리뷰를 남겨 보세요.</p>

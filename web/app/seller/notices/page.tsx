@@ -6,6 +6,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { AUDIENCE_LABEL, when } from '@/lib/format';
 import type { Notice, Paged } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 export default function SellerNotices() {
   const [page, setPage] = useState(1);
@@ -20,7 +21,7 @@ export default function SellerNotices() {
     <>
       <div className="title"><h1>공지</h1></div>
       <Note kind="error">{failed}</Note>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet"><h3>아직 공지가 없습니다</h3><p>운영자가 판매자에게 알릴 소식을 올리면 여기에서 볼 수 있습니다.</p></div>
       ) : (
         <div className="sheet">

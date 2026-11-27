@@ -182,7 +182,46 @@ td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: t
   .sign { font-size: 1.9rem; }
   .pay { grid-template-columns: 1fr; }
 }
-@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* ---- 움직임: 손에 닿는 느낌 ----
+   좌판은 누르기 전에 살짝 들리고(단추는 눌리면 내려앉는 것과 짝), 단추·칩은 색이 부드럽게 바뀐다. */
+.stall { transition: transform 0.12s ease-out, box-shadow 0.12s ease-out; }
+.stall:hover { transform: translate(-2px, -2px); }
+.stall:active { transform: none; box-shadow: none; }
+.btn, .chip, .nav a, .nav button, .side a { transition: background-color 0.12s, color 0.12s, border-color 0.12s, transform 0.06s, box-shadow 0.06s; }
+.chip:hover:not([aria-current='true']) { background: var(--kettle-pale); }
+.stall .art img { transition: transform 0.3s ease-out; }
+.stall:hover .art img { transform: scale(1.03); }
+.stall .art { overflow: hidden; }
+
+/* ---- 내용이 나타날 때 ----
+   빈 자리 다음에 내용이 '확' 바뀌지 않게 짧게 스며들게 한다. 처음 그려질 때(새로 생긴 요소)만 움직인다. */
+@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+main .sheet, main .stalls > *, main .scroll, main .detail { animation: appear 0.22s ease-out both; }
+
+/* ---- 불러오는 중: 들어올 내용 모양의 빈 좌판 ----
+   0.15초 안에 끝나면 아예 보이지 않게 늦게 나타난다(빠른 화면이 깜빡이지 않게). */
+.loading { animation: appear 0.2s ease-out 0.15s both; }
+.loading .stalls > *, .loading .sheet { animation: none; }
+.skel {
+  display: block; height: 0.9em; margin: 0.55em 0; max-width: 100%;
+  background: linear-gradient(90deg, #ece5d6 0 40%, #f6f1e6 50%, #ece5d6 60% 100%) 0 0 / 300% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.skel-big { height: 1.4em; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.skel-sheet { border: 2px dashed #b9ab9d; background: rgba(255, 255, 255, 0.55); padding: 16px 22px; }
+.skel-stall { border: 2px dashed #b9ab9d; background: rgba(255, 255, 255, 0.55); }
+.skel-stall .skel-art { display: block; height: 150px; border-bottom: 2px dashed #b9ab9d; background: repeating-linear-gradient(135deg, transparent 0 14px, #efe8da 14px 16px); }
+.skel-stall .skel-info { display: block; padding: 10px 14px 16px; }
+.skel-photo { display: block; aspect-ratio: 4 / 3; border: 2px dashed #b9ab9d; background: repeating-linear-gradient(135deg, transparent 0 14px, #efe8da 14px 16px); }
+.skel-row { display: grid; grid-template-columns: 1fr 2fr 1fr; gap: 16px; border-bottom: 1.5px dashed #d6ccbd; }
+
+/* ---- 화면 이동 막대: 천막 바로 위 ---- */
+.nav-progress { position: fixed; left: 0; top: 0; height: 4px; width: 0; background: var(--kettle); box-shadow: 0 1px 0 var(--onggi); z-index: 100; opacity: 0; pointer-events: none; }
+.nav-progress.busy { opacity: 1; width: 85%; transition: width 8s cubic-bezier(0.1, 0.7, 0.2, 1), opacity 0.1s; }
+.nav-progress.done { opacity: 0; width: 100%; transition: width 0.15s ease-out, opacity 0.25s 0.15s; }
 
 /* ---- 인쇄: 영수증만 남긴다 ---- */
 @media print {

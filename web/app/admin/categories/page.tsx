@@ -5,6 +5,7 @@ import { Note, useAction } from '@/components/Bits';
 import { api } from '@/lib/api';
 import { categoryTree } from '@/lib/format';
 import type { Category } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 function Row({ c, child, save }: { c: Category; child: boolean; save: (id: number, body: object, ok: string) => void }) {
   const [name, setName] = useState(c.name);
@@ -74,7 +75,7 @@ export default function Categories() {
         </div>
       </form>
 
-      {!list ? <p className="muted">불러오는 중입니다.</p> : (
+      {!list ? <Loading kind="table" /> : (
         <div className="sheet scroll">
           <table>
             <thead><tr><th>이름</th><th>순서</th><th>주류</th><th /></tr></thead>

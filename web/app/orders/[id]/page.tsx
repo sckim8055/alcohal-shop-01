@@ -12,6 +12,7 @@ import { useMe } from '@/components/Me';
 import { api } from '@/lib/api';
 import { CLAIM_TYPE_LABEL, claimOpen, when, won } from '@/lib/format';
 import type { Claim, ClaimType, OrderDetail, ReorderResult, Sub, SubRow } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 const RETURN_DAYS = 7;
 const utcMs = (t: string) => new Date(t.endsWith('Z') ? t : t + 'Z').getTime();
@@ -231,7 +232,7 @@ function Detail() {
   const { me } = useMe();
   const reorder = useReorder(Number(id));
   if (missing) return <div className="sheet"><h3>주문을 찾을 수 없습니다</h3><Link className="btn" href="/my/orders">주문목록으로</Link></div>;
-  if (!o) return <p className="muted">불러오는 중입니다.</p>;
+  if (!o) return <Loading kind="table" />;
   const mine = me?.user?.id === o.order.buyerId;
   const waiting = o.subs.some((s) => s.sub.status === 'awaiting_deposit' && !s.sub.depositReportedAt);
 

@@ -8,6 +8,7 @@ import type { Product, SubStatus } from '@/lib/types';
 import { Art } from './Art';
 import { Stars } from './Stars';
 import { useMe } from './Me';
+import { Loading } from './Loading';
 
 export function Stamp({ status }: { status: SubStatus }) {
   const tone = status === 'awaiting_deposit' ? '' : status === 'cancelled' || status === 'refunded' ? 'off' : status === 'shipped' ? 'blue' : 'good';
@@ -45,7 +46,7 @@ export function useAction() {
 /** 로그인해야 볼 수 있는 화면을 감싼다. */
 export function NeedLogin({ children }: { children: React.ReactNode }) {
   const { me, loading } = useMe();
-  if (loading) return <p className="muted">불러오는 중입니다.</p>;
+  if (loading) return <Loading />;
   if (!me?.user) {
     return (
       <div className="sheet narrow">

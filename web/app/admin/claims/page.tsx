@@ -8,6 +8,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { when, won } from '@/lib/format';
 import type { Claim, Paged } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 const TABS: [string, string][] = [['', '전체'], ['requested', '신청됨'], ['approved', '승인됨'], ['done', '처리 완료'], ['rejected', '거절됨'], ['withdrawn', '철회함']];
 
@@ -25,7 +26,7 @@ function List() {
       <div className="tabs" role="group" aria-label="신청 상태">
         {TABS.map(([v, label]) => <button key={v} type="button" className="chip" aria-current={status === v} onClick={() => { setStatus(v); setPage(1); }}>{label}</button>)}
       </div>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? <div className="sheet"><h3>해당하는 신청이 없습니다</h3><p>다른 상태 탭을 눌러 보세요.</p></div> : (
+      {!data ? <Loading kind="table" /> : data.items.length === 0 ? <div className="sheet"><h3>해당하는 신청이 없습니다</h3><p>다른 상태 탭을 눌러 보세요.</p></div> : (
         <div className="sheet scroll">
           <table>
             <thead><tr><th>주문번호</th><th>구매자</th><th>가게</th><th>상품·사유</th><th className="num">금액</th><th>상태</th><th>신청일</th></tr></thead>

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
+import { Loading } from '@/components/Loading';
 
 type Summary = { members: number; pendingSellers: number; productsOnSale: number; awaitingDeposit: number; toShip: number; unpaidInvoices: number; claimsOpen?: number; inquiriesUnanswered?: number };
 
@@ -14,7 +15,7 @@ export default function AdminHome() {
   return (
     <>
       <div className="title"><h1>오늘의 장터</h1></div>
-      {!s ? <p className="muted">불러오는 중입니다.</p> : (
+      {!s ? <Loading /> : (
         <div className="figures">
           <Link className="figure" href="/admin/sellers"><b>{s.pendingSellers}</b>심사를 기다리는 가게</Link>
           <Link className="figure" href="/admin/orders?status=awaiting_deposit"><b>{s.awaitingDeposit}</b>입금을 기다리는 주문</Link>

@@ -8,6 +8,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { when, won } from '@/lib/format';
 import type { Claim, Paged } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 export default function MyClaims() {
   const [page, setPage] = useState(1);
@@ -24,7 +25,7 @@ export default function MyClaims() {
     <>
       <div className="title"><h1>취소·반품·교환 내역</h1></div>
       <Note kind="error">{failed}</Note>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet">
           <h3>신청한 내역이 없습니다</h3>
           <p>취소·반품·교환은 주문 상세 화면에서 가게별로 신청할 수 있습니다.</p>

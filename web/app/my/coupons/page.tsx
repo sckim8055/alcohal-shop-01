@@ -8,6 +8,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { when } from '@/lib/format';
 import type { MemberCoupon, Paged } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 type Tab = 'usable' | 'used' | 'expired';
 const TABS: [Tab, string][] = [['usable', '쓸 수 있는 쿠폰'], ['used', '쓴 쿠폰'], ['expired', '기한 지난 쿠폰']];
@@ -39,7 +40,7 @@ export default function MyCoupons() {
         {TABS.map(([v, label]) => <button key={v} type="button" className="chip" aria-current={tab === v} onClick={() => { setTab(v); setPage(1); }}>{label}</button>)}
       </div>
       <Note kind="error">{failed}</Note>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet"><h3>{EMPTY[tab][0]}</h3><p>{EMPTY[tab][1]}</p><Link className="btn" href="/coupons">쿠폰 받으러 가기</Link></div>
       ) : (
         <>

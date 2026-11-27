@@ -8,6 +8,7 @@ import type { Inquiry, InquiryInput, Paged } from '@/lib/types';
 import { Note, useAction } from './Bits';
 import { useMe } from './Me';
 import { Pager } from './Pager';
+import { Loading } from './Loading';
 
 export function InquiryStamp({ q }: { q: Pick<Inquiry, 'status'> }) {
   return <span className={'stamp ' + (q.status === 'answered' ? 'good' : '')}>{INQUIRY_STATUS_LABEL[q.status] ?? q.status}</span>;
@@ -166,7 +167,7 @@ export function ProductInquiries({ productId }: { productId: number }) {
             onDone={() => { setWriting(false); setMessage('문의를 올렸습니다. 판매자가 답하면 알림으로 알려 드립니다.'); if (page === 1) load(); else setPage(1); }} />
         </div>
       )}
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <p>아직 문의가 없습니다. 궁금한 점이 있으면 “문의하기”를 눌러 판매자에게 물어보세요.</p>
       ) : (
         <>

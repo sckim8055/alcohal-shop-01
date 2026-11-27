@@ -8,6 +8,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { when, won } from '@/lib/format';
 import type { Paged, SubStatus } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 type Row = { id: number; orderId: number; orderNo: string; buyerName: string; shopName: string; total: number; status: SubStatus; createdAt: string };
 const TABS: [string, string][] = [['', '전체'], ['awaiting_deposit', '입금 대기'], ['paid', '입금 확인'], ['shipped', '배송 중'], ['delivered', '배송 완료'], ['completed', '구매 확정'], ['cancelled', '취소'], ['refunded', '환불']];
@@ -25,7 +26,7 @@ function List() {
       <div className="tabs" role="group" aria-label="주문 상태">
         {TABS.map(([v, label]) => <button key={v} type="button" className="chip" aria-current={status === v} onClick={() => { setStatus(v); setPage(1); }}>{label}</button>)}
       </div>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? <div className="sheet"><h3>해당하는 주문이 없습니다</h3></div> : (
+      {!data ? <Loading kind="table" /> : data.items.length === 0 ? <div className="sheet"><h3>해당하는 주문이 없습니다</h3></div> : (
         <div className="sheet scroll">
           <table>
             <thead><tr><th>주문번호</th><th>구매자</th><th>가게</th><th className="num">금액</th><th>상태</th><th>주문일</th></tr></thead>

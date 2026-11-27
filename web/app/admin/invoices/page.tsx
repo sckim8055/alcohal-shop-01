@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useAdminData } from '@/components/AdminBits';
 import { Note } from '@/components/Bits';
 import { invoiceNet, when, won } from '@/lib/format';
+import { Loading } from '@/components/Loading';
 
 export default function Invoices() {
   const { d, act, call } = useAdminData();
@@ -22,7 +23,7 @@ export default function Invoices() {
         <button className="btn" type="button" disabled={act.busy || !period}
           onClick={() => call('/admin/invoices/generate', 'POST', { period }, period + ' 청구서를 만들고 판매자에게 알렸습니다.')}>청구서 만들기</button>
       </div>
-      {!d ? <p className="muted">불러오는 중입니다.</p> : d.invoices.length === 0 ? <div className="sheet"><h3>아직 청구서가 없습니다</h3></div> : (
+      {!d ? <Loading kind="table" /> : d.invoices.length === 0 ? <div className="sheet"><h3>아직 청구서가 없습니다</h3></div> : (
         <div className="sheet scroll">
           <table>
             <thead><tr><th>기간</th><th>가게</th><th className="num">매출</th><th className="num">수수료</th><th className="num">플랫폼 쿠폰 차감</th><th className="num">낼 금액</th><th>상태</th></tr></thead>

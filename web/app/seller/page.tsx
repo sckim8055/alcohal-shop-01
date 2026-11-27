@@ -6,6 +6,7 @@ import { useMe } from '@/components/Me';
 import { Apply } from '@/components/SellerForms';
 import { api } from '@/lib/api';
 import type { Invoice, Seller, SellerTodo } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 type Count = { status: string; count: number };
 export type SellerDashboard = { seller: Seller; orderCounts: Count[]; productCounts: Count[]; invoices: Invoice[]; todo?: SellerTodo };
@@ -27,7 +28,7 @@ export default function SellerHome() {
       </div>
     );
   }
-  if (!d) return <p className="muted">불러오는 중입니다.</p>;
+  if (!d) return <Loading />;
   const of = (list: Count[], st: string) => list.find((c) => c.status === st)?.count ?? 0;
   const unpaid = d.invoices.filter((i) => i.status === 'issued').length;
   const todo = { claimsRequested: d.todo?.claimsRequested ?? 0, returnsApproved: d.todo?.returnsApproved ?? 0, soldOut: d.todo?.soldOut ?? 0, shipLate: d.todo?.shipLate ?? 0, inquiriesUnanswered: d.todo?.inquiriesUnanswered ?? 0, reviewsUnanswered: d.todo?.reviewsUnanswered ?? 0 };

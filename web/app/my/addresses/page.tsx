@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Note, useAction } from '@/components/Bits';
 import { api } from '@/lib/api';
 import type { Address, AddressInput } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 const MAX = 10;
 const BLANK: AddressInput = { label: '', receiver: '', phone: '', address: '', isDefault: false };
@@ -87,7 +88,7 @@ export default function MyAddresses() {
         <Note kind="error">{act.error}</Note>
         <Note kind="ok">{act.done}</Note>
       </div>
-      {!list ? <p className="muted">불러오는 중입니다.</p> : list.length === 0 ? (
+      {!list ? <Loading kind="table" /> : list.length === 0 ? (
         <div className="sheet">
           <h3>저장한 배송지가 없습니다</h3>
           <p>아래에서 배송지를 추가하면 주문할 때 골라 쓸 수 있습니다.</p>

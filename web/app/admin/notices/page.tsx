@@ -6,6 +6,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { AUDIENCE_LABEL, when } from '@/lib/format';
 import type { Notice, NoticeAudience, Paged } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 type Draft = { audience: NoticeAudience; title: string; body: string; pinned: boolean };
 const EMPTY: Draft = { audience: 'all', title: '', body: '', pinned: false };
@@ -93,7 +94,7 @@ export default function AdminNotices() {
         <NoticeForm key={form.editing?.id ?? 'new'} editing={form.editing} onCancel={() => setForm(null)}
           onSaved={(m) => { setForm(null); setMessage(m); load(); }} />
       )}
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading kind="table" /> : data.items.length === 0 ? (
         <div className="sheet"><h3>올린 공지가 없습니다</h3><p>“새 공지 쓰기”를 눌러 장터 소식을 알려 주세요.</p></div>
       ) : (
         <div className="sheet scroll">

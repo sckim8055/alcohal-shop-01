@@ -6,6 +6,7 @@ import { Pager } from '@/components/Pager';
 import { ReviewItem } from '@/components/Reviews';
 import { api } from '@/lib/api';
 import type { Paged, Review } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 const TABS: [string, string][] = [['', '전체'], ['visible', '보이는 리뷰'], ['hidden', '숨긴 리뷰']];
 
@@ -34,7 +35,7 @@ export default function AdminReviews() {
       </div>
       <Note kind="error">{act.error}</Note>
       <Note kind="ok">{act.done}</Note>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet"><h3>해당하는 리뷰가 없습니다</h3><p>다른 탭을 눌러 보세요.</p></div>
       ) : (
         <div className="sheet">

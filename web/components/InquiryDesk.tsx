@@ -8,6 +8,7 @@ import { Pager } from './Pager';
 import { api } from '@/lib/api';
 import { when } from '@/lib/format';
 import type { Inquiry, Paged } from '@/lib/types';
+import { Loading } from './Loading';
 
 /** 받은 문의에 답하는 화면. 판매자(상품 문의·주문 문의)와 운영자(1:1 문의)가 같이 쓴다. */
 export function InquiryDesk({ base, admin }: { base: '/seller/inquiries' | '/admin/inquiries'; admin?: boolean }) {
@@ -32,7 +33,7 @@ export function InquiryDesk({ base, admin }: { base: '/seller/inquiries' | '/adm
       </div>
       <Note kind="error">{failed}</Note>
       <Note kind="ok">{message}</Note>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet">
           <h3>{unanswered ? '답을 기다리는 문의가 없습니다' : '아직 받은 문의가 없습니다'}</h3>
           <p>새 문의가 오면 알림으로 알려 드립니다.{unanswered && ' 지난 문의는 “전체” 탭에서 볼 수 있습니다.'}</p>

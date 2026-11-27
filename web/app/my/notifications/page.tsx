@@ -7,6 +7,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { when } from '@/lib/format';
 import type { Notification, Paged } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 export default function Notifications() {
   const { refresh } = useMe();
@@ -35,7 +36,7 @@ export default function Notifications() {
         <div><h1>알림</h1></div>
         {data && data.items.some((n) => !n.readAt) && <button className="btn plain" type="button" onClick={readAll}>모두 읽음으로</button>}
       </div>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet"><h3>아직 알림이 없습니다</h3><p>주문, 입금 확인, 발송 같은 소식이 여기에 쌓입니다.</p></div>
       ) : (
         <div className="sheet">

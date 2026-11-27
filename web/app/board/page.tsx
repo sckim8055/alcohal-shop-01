@@ -6,6 +6,7 @@ import { useMe } from '@/components/Me';
 import { api } from '@/lib/api';
 import { when } from '@/lib/format';
 import type { PostSummary } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 export default function Board() {
   const { me } = useMe();
@@ -20,7 +21,7 @@ export default function Board() {
         {me?.user && <Link className="btn" href="/board/new">글쓰기</Link>}
       </div>
       <p>술을 빚은 기록과 요령을 나누는 곳입니다. 술을 사고파는 글은 올릴 수 없습니다.</p>
-      {!posts ? <p className="muted">불러오는 중입니다.</p> : posts.length === 0 ? (
+      {!posts ? <Loading kind="table" /> : posts.length === 0 ? (
         <div className="sheet"><h3>아직 글이 없습니다</h3><p>첫 이야기를 남겨 보세요.</p></div>
       ) : (
         <div className="sheet">

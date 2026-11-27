@@ -7,6 +7,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { PRODUCT_STATUS_LABEL } from '@/lib/format';
 import type { Paged, Product } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 export default function MyWishlist() {
   const [page, setPage] = useState(1);
@@ -30,7 +31,7 @@ export default function MyWishlist() {
       <div className="title"><h1>찜한 상품</h1></div>
       <Note kind="error">{act.error}</Note>
       <Note kind="ok">{act.done}</Note>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading kind="stalls" /> : data.items.length === 0 ? (
         <div className="sheet">
           <h3>찜한 상품이 없습니다</h3>
           <p>마음에 드는 상품 화면에서 “찜하기”를 누르면 여기에 모아 둡니다.</p>

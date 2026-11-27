@@ -7,6 +7,7 @@ import { CouponRow } from '@/components/CouponTicket';
 import { api } from '@/lib/api';
 import { STATUS_LABEL, when, won } from '@/lib/format';
 import type { OrderDetail, Sub } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 function SubTable({ s }: { s: Sub }) {
   return (
@@ -42,7 +43,7 @@ function Receipt() {
   }, [id, subId]);
 
   if (missing) return <div className="sheet"><h3>영수증을 찾을 수 없습니다</h3></div>;
-  if (!o) return <p className="muted">불러오는 중입니다.</p>;
+  if (!o) return <Loading kind="table" />;
   const sum = o.subs.reduce((a, s) => a + s.sub.total, 0);
 
   return (
@@ -68,5 +69,5 @@ function Receipt() {
 }
 
 export default function ReceiptPage() {
-  return <NeedLogin><Suspense fallback={<p className="muted">불러오는 중입니다.</p>}><Receipt /></Suspense></NeedLogin>;
+  return <NeedLogin><Suspense fallback={<Loading kind="table" />}><Receipt /></Suspense></NeedLogin>;
 }

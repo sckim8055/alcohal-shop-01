@@ -8,6 +8,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { when } from '@/lib/format';
 import type { Inquiry, Paged } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 export default function MyInquiries() {
   const [page, setPage] = useState(1);
@@ -42,7 +43,7 @@ export default function MyInquiries() {
             onDone={() => { setWriting(false); setMessage('1:1 문의를 올렸습니다. 운영자가 답하면 알림과 메일로 알려 드립니다.'); if (page === 1) load(); else setPage(1); }} />
         </div>
       )}
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet">
           <h3>남긴 문의가 없습니다</h3>
           <p>상품이 궁금하면 상품 화면의 “문의하기”, 주문한 것이 궁금하면 주문 상세의 “판매자에게 문의”를 눌러 주세요. 장터 이용에 대한 것은 위의 “운영자에게 1:1 문의”로 물어보세요.</p>

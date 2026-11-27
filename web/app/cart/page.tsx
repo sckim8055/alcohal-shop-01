@@ -7,6 +7,7 @@ import { useMe } from '@/components/Me';
 import { api } from '@/lib/api';
 import { won } from '@/lib/format';
 import type { Cart } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 function CartView() {
   const { refresh } = useMe();
@@ -23,7 +24,7 @@ function CartView() {
     refresh();
   }
 
-  if (!cart) return <><Note kind="error">{act.error}</Note><p className="muted">불러오는 중입니다.</p></>;
+  if (!cart) return <><Note kind="error">{act.error}</Note><Loading kind="table" /></>;
   if (cart.groups.length === 0) {
     return (
       <div className="sheet">

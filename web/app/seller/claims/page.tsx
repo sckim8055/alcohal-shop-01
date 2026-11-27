@@ -9,6 +9,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { CLAIM_TYPE_LABEL, when, won } from '@/lib/format';
 import type { Carrier, Claim, Paged } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 /** 신청 한 건과 판매자가 할 수 있는 일 */
 function Row({ c, carriers, onDone }: { c: Claim; carriers: Carrier[]; onDone: (msg: string) => void }) {
@@ -123,7 +124,7 @@ function List() {
       </div>
       <Note kind="error">{failed}</Note>
       <Note kind="ok">{message}</Note>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet">
           <h3>해당하는 신청이 없습니다</h3>
           <p>{EMPTY[status] ?? '다른 상태 탭을 눌러 보세요.'}</p>

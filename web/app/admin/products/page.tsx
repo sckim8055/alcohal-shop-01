@@ -8,6 +8,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { PRODUCT_STATUS_LABEL, won } from '@/lib/format';
 import type { Paged, Product } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 const TABS: [string, string][] = [['', '전체'], ['on_sale', '판매 중'], ['paused', '판매 중지'], ['draft', '임시저장'], ['ended', '판매 종료'], ['blocked', '운영자 차단']];
 
@@ -36,7 +37,7 @@ function List() {
         <input name="q" placeholder="상품 이름" aria-label="상품 이름으로 찾기" />
         <button className="btn plain small">찾기</button>
       </form>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? <div className="sheet"><h3>해당하는 상품이 없습니다</h3></div> : (
+      {!data ? <Loading kind="table" /> : data.items.length === 0 ? <div className="sheet"><h3>해당하는 상품이 없습니다</h3></div> : (
         <div className="sheet scroll">
           <table>
             <thead><tr><th>상품</th><th>가게</th><th className="num">값</th><th className="num">재고</th><th>상태</th><th /></tr></thead>

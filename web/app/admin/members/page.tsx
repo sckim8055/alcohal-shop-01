@@ -7,6 +7,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { when } from '@/lib/format';
 import type { Paged } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 type MemberRow = { id: number; email: string; name: string; role: string; status: string; shopName: string | null; adultVerifiedAt: string | null; lastLoginAt: string | null; createdAt: string };
 const ROLE: Record<string, string> = { buyer: '구매자', seller: '판매자', admin: '운영자' };
@@ -37,7 +38,7 @@ export default function Members() {
         <select name="status" aria-label="상태"><option value="">모든 상태</option>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select>
         <button className="btn plain small">찾기</button>
       </form>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? <div className="sheet"><h3>해당하는 회원이 없습니다</h3></div> : (
+      {!data ? <Loading kind="table" /> : data.items.length === 0 ? <div className="sheet"><h3>해당하는 회원이 없습니다</h3></div> : (
         <div className="sheet scroll">
           <table>
             <thead><tr><th>회원</th><th>역할</th><th>상태</th><th>가입일</th><th>마지막 로그인</th><th /></tr></thead>

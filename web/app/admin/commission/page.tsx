@@ -3,6 +3,7 @@
 import { RateInput, useAdminData } from '@/components/AdminBits';
 import { Note } from '@/components/Bits';
 import { categoryTree, percent, when } from '@/lib/format';
+import { Loading } from '@/components/Loading';
 
 const SCOPE: Record<string, string> = { default: '기본', category: '분류', seller: '판매자' };
 
@@ -14,7 +15,7 @@ export default function Commission() {
       <p>판매자에게 따로 정한 값이 있으면 그 값을, 없으면 중분류, 대분류, 기본값 순서로 찾습니다. 바꾼 값은 이후 들어오는 주문부터 적용됩니다.</p>
       <Note kind="error">{act.error}</Note>
       <Note kind="ok">{act.done}</Note>
-      {!d ? <p className="muted">불러오는 중입니다.</p> : (
+      {!d ? <Loading kind="table" /> : (
         <div className="stack">
           <div className="sheet">
             <table>

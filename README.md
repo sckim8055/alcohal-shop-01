@@ -22,7 +22,7 @@
 | Node.js | `..\node-v26.13.1-win-x64` |
 | Gradle 라이브러리 캐시 | `..\_gradle-cache` (자동 생성) |
 | npm 캐시 | `..\_npm-cache` (자동 생성) |
-| ffmpeg (선택) | `..\ffmpeg` (`ffmpeg\bin\ffmpeg.exe` 가 있어야 함). 있으면 올린 동영상을 자동으로 줄인다 |
+| ffmpeg (선택) | `..\tools\ffmpeg\bin\ffmpeg.exe` (또는 `..\ffmpeg\bin\ffmpeg.exe`). 있으면 올린 동영상을 자동으로 줄인다. PyPI `imageio-ffmpeg` 0.8.1 의 Windows 꾸러미에 든 ffmpeg 9.0.2(H.264 포함, GPL)를 꺼내 쓴다 |
 
 도구 버전을 바꾸면 `env.bat`의 폴더 이름만 고치면 된다.
 

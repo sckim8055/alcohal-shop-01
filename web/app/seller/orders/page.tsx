@@ -8,6 +8,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { CLAIM_TYPE_LABEL, claimOpen, couponOff, when, won } from '@/lib/format';
 import type { Carrier, Paged, SellerOrder } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 function Row({ o, carriers, reload }: { o: SellerOrder; carriers: Carrier[]; reload: () => void }) {
   const act = useAction();
@@ -107,7 +108,7 @@ function SellerOrders() {
       <div className="tabs" role="group" aria-label="주문 상태">
         {TABS.map(([v, label]) => <button key={v} type="button" className="chip" aria-current={status === v} onClick={() => { setStatus(v); setPage(1); }}>{label}</button>)}
       </div>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet"><h3>해당하는 주문이 없습니다</h3></div>
       ) : (
         <div className="stack">

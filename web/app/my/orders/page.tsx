@@ -7,6 +7,7 @@ import { Pager } from '@/components/Pager';
 import { api } from '@/lib/api';
 import { couponOff, when, won } from '@/lib/format';
 import type { OrderDetail, Paged } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 export default function MyOrders() {
   const thisYear = new Date().getFullYear();
@@ -28,7 +29,7 @@ export default function MyOrders() {
           <button key={value} type="button" className="chip" aria-current={period === value} onClick={() => { setPeriod(value); setPage(1); }}>{label}</button>
         ))}
       </div>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading kind="table" /> : data.items.length === 0 ? (
         <div className="sheet"><h3>이 기간에 주문한 것이 없습니다</h3><Link className="btn" href="/">장 보러 가기</Link></div>
       ) : (
         <div className="stack">

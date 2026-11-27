@@ -8,6 +8,7 @@ import type { Paged, Review, ReviewSummary } from '@/lib/types';
 import { Note, useAction } from './Bits';
 import { Pager } from './Pager';
 import { Stars } from './Stars';
+import { Loading } from './Loading';
 
 /** 리뷰 사진 작은 그림. 누르면 큰 그림을 띄운다(Esc 나 "닫기"로 닫는다). */
 export function ReviewPhotos({ images, label }: { images: string[]; label: string }) {
@@ -101,7 +102,7 @@ export function ProductReviews({ productId, initial }: { productId: number; init
     <section className="sheet" id="reviews" aria-labelledby="reviews-title">
       <h2 id="reviews-title" style={{ marginBottom: 14 }}>리뷰 {total > 0 && <span className="muted" style={{ fontSize: '1.2rem' }}>{total}개</span>}</h2>
       <Note kind="error">{failed}</Note>
-      {!data && !failed ? <p className="muted">불러오는 중입니다.</p> : total === 0 ? (
+      {!data && !failed ? <Loading /> : total === 0 ? (
         <p>아직 리뷰가 없습니다. 이 상품을 사고 구매를 확정하면 <Link href="/my/reviews">리뷰 관리</Link>에서 첫 리뷰를 남길 수 있습니다.</p>
       ) : (
         <>

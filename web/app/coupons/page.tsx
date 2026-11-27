@@ -7,6 +7,7 @@ import { Note, useAction } from '@/components/Bits';
 import { useMe } from '@/components/Me';
 import { api } from '@/lib/api';
 import type { CouponOffer, MemberCoupon } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 const LOGIN = '/login?next=' + encodeURIComponent('/coupons');
 
@@ -57,7 +58,7 @@ export default function CouponsPage() {
         )}
       </section>
 
-      {!list ? <p className="muted">불러오는 중입니다.</p> : failed ? (
+      {!list ? <Loading /> : failed ? (
         <Note kind="error">{failed}</Note>
       ) : list.length === 0 ? (
         <div className="sheet"><h3>지금 받을 수 있는 쿠폰이 없습니다</h3><p>새 쿠폰이 나오면 여기에 놓아 둘게요. 그동안 장을 둘러보세요.</p><Link className="btn" href="/">장 보러 가기</Link></div>

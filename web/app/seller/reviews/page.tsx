@@ -8,6 +8,7 @@ import { Pager } from '@/components/Pager';
 import { ReviewItem } from '@/components/Reviews';
 import { api } from '@/lib/api';
 import type { Paged, Review } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 export default function SellerReviews() {
   const [unanswered, setUnanswered] = useState(true);
@@ -32,7 +33,7 @@ export default function SellerReviews() {
       </div>
       <Note kind="error">{failed}</Note>
       <Note kind="ok">{message}</Note>
-      {!data ? <p className="muted">불러오는 중입니다.</p> : data.items.length === 0 ? (
+      {!data ? <Loading /> : data.items.length === 0 ? (
         <div className="sheet">
           <h3>{unanswered ? '답글을 기다리는 리뷰가 없습니다' : '아직 받은 리뷰가 없습니다'}</h3>
           <p>{unanswered ? '새 리뷰가 달리면 알림으로 알려 드립니다. 지난 리뷰는 “전체” 탭에서 볼 수 있습니다.' : '구매자가 구매를 확정하면 리뷰를 남길 수 있습니다. 첫 리뷰가 달리면 알림으로 알려 드립니다.'}</p>

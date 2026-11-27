@@ -2,6 +2,7 @@
 
 import { RateInput, useAdminData } from '@/components/AdminBits';
 import { Note } from '@/components/Bits';
+import { Loading } from '@/components/Loading';
 
 const SELLER_STATUS: Record<string, string> = { pending: '심사 중', approved: '승인', rejected: '반려' };
 
@@ -12,7 +13,7 @@ export default function Sellers() {
       <div className="title"><h1>판매자</h1></div>
       <Note kind="error">{act.error}</Note>
       <Note kind="ok">{act.done}</Note>
-      {!d ? <p className="muted">불러오는 중입니다.</p> : (
+      {!d ? <Loading kind="table" /> : (
         <div className="sheet scroll">
           <table>
             <thead><tr><th>가게</th><th>입점</th><th>주류 면허</th><th>이 가게만의 수수료율</th></tr></thead>

@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { when } from '@/lib/format';
 import type { Post } from '@/lib/types';
+import { Loading } from '@/components/Loading';
 
 export default function PostPage() {
   const { id } = useParams<{ id: string }>();
@@ -15,7 +16,7 @@ export default function PostPage() {
     api<Post>('/posts/' + id).then(setPost).catch(() => setMissing(true));
   }, [id]);
   if (missing) return <div className="sheet"><h3>글을 찾을 수 없습니다</h3><Link className="btn" href="/board">이야기로</Link></div>;
-  if (!post) return <p className="muted">불러오는 중입니다.</p>;
+  if (!post) return <Loading />;
   return (
     <article className="sheet" style={{ maxWidth: 760 }}>
       <h1 style={{ fontSize: '2rem' }}>{post.title}</h1>
