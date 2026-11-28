@@ -282,14 +282,54 @@ main .sheet, main .stalls > *, main .scroll, main .detail { animation: appear 0.
 .rich blockquote { margin: 0 0 0.8em; padding: 6px 14px; border-left: 5px solid var(--kettle); background: var(--kettle-pale); }
 .rich blockquote p:last-child { margin-bottom: 0; }
 .rich hr { border: 0; border-top: 2px dashed var(--onggi); margin: 1.2em 0; }
-.rich img { display: block; max-width: 100%; height: auto; border: var(--line); margin: 0.8em 0; }
+/* 상세페이지는 긴 사진 여러 장을 이어 붙여 한 장처럼 보이게 만드는 경우가 많아, 사진 사이에 테두리·여백을 두지 않는다. */
+.rich img { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+.rich .image-row img { border: var(--line); }
 .rich a { color: var(--tarp); }
+.rich img[referrerpolicy] { background: var(--takju); }
+/* 강조 상자: 인용(왼쪽 줄)과 구별되게 네 변을 두르고 손글씨 메모처럼 */
+.rich .callout { border: var(--line); background: var(--kettle-pale); padding: 10px 16px; margin: 0 0 0.8em; }
+.rich .callout p:last-child { margin-bottom: 0; }
+/* 사진 묶음: 나란히(격자) 또는 옆으로 넘겨 보기. 넘겨 보기는 스크립트 없이 가로 스크롤만 쓴다. */
+.rich .image-row { margin: 0.8em 0; gap: 8px; }
+.rich .image-row img { margin: 0; }
+.rich .image-row.grid, .rich .image-row[data-layout='grid'] { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.rich .image-row.grid img, .rich .image-row[data-layout='grid'] img { width: 100%; aspect-ratio: 1; object-fit: cover; }
+.rich .image-row.slide, .rich .image-row[data-layout='slide'] { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 6px; }
+.rich .image-row.slide img, .rich .image-row[data-layout='slide'] img { flex: 0 0 85%; scroll-snap-align: center; }
+.rich video { display: block; width: 100%; border: var(--line); background: var(--onggi); margin: 0.8em 0; }
+.rich .embed, .rich div[data-youtube-video] { position: relative; aspect-ratio: 16 / 9; border: var(--line); margin: 0.8em 0; background: var(--onggi); }
+.rich .embed iframe, .rich div[data-youtube-video] iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.rich .rich-table, .rich .tableWrapper table { border-collapse: collapse; margin: 0.8em 0; min-width: 60%; }
+.rich .rich-table th, .rich .rich-table td, .rich .tableWrapper th, .rich .tableWrapper td { border: 1.5px solid var(--onggi); padding: 6px 10px; vertical-align: top; text-align: left; }
+.rich .rich-table th, .rich .tableWrapper th { background: var(--takju); }
+.rich .rich-table p, .rich .tableWrapper p { margin: 0; }
+.rich .rich-table td, .rich .rich-table th { height: 2.2em; }
+.rich .tableWrapper { overflow-x: auto; }
 .editor { border: var(--line); background: var(--paper); }
 .toolbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; border-bottom: var(--line); background: var(--takju); }
 .tool { font: inherit; font-size: 0.92rem; padding: 3px 9px; border: 1.5px solid var(--onggi); background: var(--paper); cursor: pointer; }
 .tool[aria-pressed='true'] { background: var(--kettle); }
 .toolbar .sep { width: 1px; background: var(--onggi); opacity: 0.35; margin: 2px 4px; }
 .editor-area { min-height: 260px; padding: 14px 16px; outline: none; max-width: none; }
+.toolbar + .toolbar { border-top: 0; }
+.toolbar.sub { background: var(--kettle-pale); }
+select.tool { padding: 3px 4px; }
+.tool:disabled { opacity: 0.45; cursor: default; }
+.editor-area .ProseMirror-selectednode { outline: 3px solid var(--kettle); outline-offset: 2px; }
+.editor-area .selectedCell { background: var(--kettle-pale); }
+.editor-hint { margin: 0; padding: 6px 12px; border-bottom: 1.5px dashed var(--onggi-soft); }
+.import-box { padding: 10px 12px; border-bottom: var(--line); background: var(--takju); display: grid; gap: 8px; }
+.import-box textarea { width: 100%; font-size: 0.85rem; }
+.import-box .actions { display: flex; gap: 8px; }
+/* 휴대폰 미리보기: 편집기 옆에 좁은 화면을 두어 실제 폭에서 어떻게 보이는지 확인한다. */
+.editor-split { display: grid; grid-template-columns: minmax(0, 1fr) 400px; }
+.phone-preview { border-left: var(--line); background: var(--takju); padding: 14px; }
+.phone-screen { width: 360px; max-width: 100%; height: 640px; overflow: auto; margin: 0 auto; border: 3px solid var(--onggi); border-top-width: 18px; border-bottom-width: 24px; background: var(--paper); padding: 12px; font-size: 0.95rem; }
+@media (max-width: 900px) {
+  .editor-split { grid-template-columns: 1fr; }
+  .phone-preview { border-left: 0; border-top: var(--line); }
+}
 .editor-area p.is-editor-empty:first-child::before { content: '상품을 소개하는 글을 써 주세요.'; color: var(--onggi-soft); float: left; height: 0; pointer-events: none; }
 
 /* ---- 알림, 요약 칸, 없는 화면 ---- */

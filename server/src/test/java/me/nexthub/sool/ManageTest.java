@@ -371,6 +371,63 @@ class ManageTest {
         assertEquals(400, seller.post("/api/seller/products", p).status());
     }
 
+    @Test
+    @DisplayName("꾸민 설명: 표, 직접 올린 동영상, 유튜브, 사진 묶음, 글자 색·크기·맞춤, 외부 사진·링크는 받는다")
+    void richDescriptionBlocks() {
+        Api seller = as("supplies@test.local");
+        Map<String, Object> p = product("꾸민 설명 상품", categoryId("발효 용기"));
+        Map<String, Object> colored = Map.of("type", "text", "text", "빨간 큰 글",
+                "marks", List.of(Map.of("type", "textStyle", "attrs", Map.of("color", "#d62b1f", "fontSize", "20px")),
+                        Map.of("type", "link", "attrs", Map.of("href", "https://example.com/brewery"))));
+        Map<String, Object> cell = Map.of("type", "tableCell", "content", List.of(
+                Map.of("type", "paragraph", "content", List.of(Map.of("type", "text", "text", "도수")))));
+        p.put("descriptionDoc", Map.of("type", "doc", "content", List.of(
+                Map.of("type", "paragraph", "attrs", Map.of("textAlign", "center"), "content", List.of(colored)),
+                Map.of("type", "table", "content", List.of(Map.of("type", "tableRow", "content", List.of(cell, cell)))),
+                Map.of("type", "video", "attrs", Map.of("src", "/api/files/" + "a".repeat(32) + ".mp4")),
+                Map.of("type", "youtube", "attrs", Map.of("src", "https://www.youtube.com/watch?v=dQw4w9WgXcQ")),
+                Map.of("type", "imageRow", "attrs", Map.of("layout", "slide"), "content", List.of(
+                        Map.of("type", "image", "attrs", Map.of("src", "/api/files/" + "b".repeat(32) + ".jpg")),
+                        Map.of("type", "image", "attrs", Map.of("src", "https://thumbnail.example.com/detail/1.jpg")))),
+                Map.of("type", "callout", "content", List.of(
+                        Map.of("type", "paragraph", "content", List.of(Map.of("type", "text", "text", "냉장 보관"))))))));
+        JsonNode saved = seller.post("/api/seller/products", p).body();
+        String doc = saved.get("descriptionDoc").asString();
+        assertTrue(doc.contains("\"youtube\"") && doc.contains("\"imageRow\"") && doc.contains("\"tableCell\""));
+        assertTrue(saved.get("product").get("description").asString().contains("냉장 보관"));
+    }
+
+    @Test
+    @DisplayName("꾸민 설명: 위험한 주소, 모르는 블록, 다른 사이트 동영상, 자리가 틀린 블록은 거절한다")
+    void richDescriptionRejects() {
+        Api seller = as("supplies@test.local");
+        Map<String, Object> p = product("거절될 설명", categoryId("발효 용기"));
+        List<Map<String, Object>> bad = List.of(
+                // 스크립트 주소 링크
+                Map.of("type", "paragraph", "content", List.of(Map.of("type", "text", "text", "눌러",
+                        "marks", List.of(Map.of("type", "link", "attrs", Map.of("href", "javascript:alert(1)")))))),
+                // 파일 안에 박힌 사진, http 사진
+                Map.of("type", "image", "attrs", Map.of("src", "data:image/png;base64,AAAA")),
+                Map.of("type", "image", "attrs", Map.of("src", "http://example.com/a.jpg")),
+                // 다른 사이트 동영상, 유튜브가 아닌 주소
+                Map.of("type", "video", "attrs", Map.of("src", "https://example.com/a.mp4")),
+                Map.of("type", "youtube", "attrs", Map.of("src", "https://evil.example.com/watch?v=dQw4w9WgXcQ")),
+                // 모르는 블록, 스타일에 끼운 다른 값
+                Map.of("type", "iframe", "attrs", Map.of("src", "https://example.com")),
+                Map.of("type", "paragraph", "content", List.of(Map.of("type", "text", "text", "색",
+                        "marks", List.of(Map.of("type", "textStyle", "attrs", Map.of("color", "red;background:url(x)")))))),
+                Map.of("type", "paragraph", "attrs", Map.of("textAlign", "expression(x)")),
+                // 자리가 틀린 블록: 문단 안의 사진, 맨 바깥의 표 줄
+                Map.of("type", "paragraph", "content", List.of(Map.of("type", "image", "attrs", Map.of("src", "https://example.com/a.jpg")))),
+                Map.of("type", "tableRow", "content", List.of()));
+        for (Map<String, Object> node : bad) {
+            p.put("descriptionDoc", Map.of("type", "doc", "content", List.of(node)));
+            var res = seller.post("/api/seller/products", p);
+            assertEquals(400, res.status(), "거절해야 함: " + node);
+            assertTrue(res.body().get("message").asString().startsWith("상품 설명"), node.toString());
+        }
+    }
+
     // ---- 페이지 나누기 ----
 
     @Test
